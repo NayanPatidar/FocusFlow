@@ -9,6 +9,7 @@ struct ContentView: View {
 
     @State private var counter = 1
     @State private var newTaskTitle = ""
+    @FocusState private var isTaskFieldFocused: Bool
 
     func greetUser() {
         print("Welcome to Focus Flows")
@@ -66,6 +67,7 @@ struct ContentView: View {
                 
                 TextField("Enter a task", text: $newTaskTitle)
                     .textFieldStyle(.roundedBorder)
+                    .focused($isTaskFieldFocused)
                     .padding(.horizontal)
                 
                 if tasks.isEmpty {
@@ -83,6 +85,7 @@ struct ContentView: View {
                         )
 
                         newTaskTitle = ""
+                        isTaskFieldFocused = false
                     }
                 }
 
