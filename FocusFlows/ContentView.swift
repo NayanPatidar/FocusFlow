@@ -15,10 +15,10 @@ struct ContentView: View {
     struct Task: Identifiable {
         let id = UUID()
         let title: String
-        let isCompleted: Bool
+        var isCompleted: Bool
     }
 
-    let tasks = [
+    @State private var tasks = [
         Task(title: "Read 10 pages", isCompleted: false),
         Task(title: "Practice Swift", isCompleted: false),
         Task(title: "Go to the gym", isCompleted: true)
@@ -54,13 +54,19 @@ struct ContentView: View {
             Text("Let's get started!")
                 .font(.subheadline)
             
-            ForEach(tasks) { task in
-                HStack {
-                    Text(task.title)
-                        .font(.title2)
+            ForEach(tasks.indices, id: \.self) { index in
+                Button {
+                    tasks[index].isCompleted.toggle()
+                } label: {
+                    HStack {
+                        Text(tasks[index].title)
+                            .font(.title2)
 
-                    Text(" - \(task.isCompleted)")
-                        .font(.title2)
+                        if tasks[index].isCompleted {
+                            Image(systemName: "checkmark.circle.fill")
+                        } else {
+                            Image(systemName: "circle")
+                        }                    }
                 }
             }
             
