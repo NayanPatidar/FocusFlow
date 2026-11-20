@@ -8,6 +8,7 @@ struct ContentView: View {
     let dailyTarget = 5
 
     @State private var counter = 1
+    @State private var newTaskTitle = ""
 
     func greetUser() {
         print("Welcome to Focus Flows")
@@ -63,6 +64,10 @@ struct ContentView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 20))
                 
                 
+                TextField("Enter a task", text: $newTaskTitle)
+                    .textFieldStyle(.roundedBorder)
+                    .padding(.horizontal)
+                
                 if tasks.isEmpty {
                     Text("No tasks yet")
                 } else {
@@ -72,7 +77,11 @@ struct ContentView: View {
                 }
                 
                 FocusButton(title: "Add Task") {
-                    print("Adding a task")
+                    tasks.append(
+                        FocusTask(title: newTaskTitle, isCompleted: false)
+                    )
+
+                    newTaskTitle = ""
                 }
 
                 FocusButton(title: "Add Habit") {
