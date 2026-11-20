@@ -79,6 +79,8 @@ struct ContentView: View {
                 }
                 
                 FocusButton(title: "Add Task") {
+                    let trimmedTitle = newTaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+
                     if !newTaskTitle.isEmpty {
                         tasks.append(
                             FocusTask(title: newTaskTitle, isCompleted: false)
