@@ -55,27 +55,7 @@ struct ContentView: View {
                 .font(.subheadline)
             
             ForEach(tasks.indices, id: \.self) { index in
-                Button {
-                    tasks[index].isCompleted.toggle()
-                } label: {
-                    HStack {
-                        Text(tasks[index].title)
-                            .font(.title2)
-                            .strikethrough(tasks[index].isCompleted)
-                            .foregroundStyle(tasks[index].isCompleted ? .gray : .primary)
-
-                        Spacer()
-
-                        if tasks[index].isCompleted {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(.green)
-                        } else {
-                            Image(systemName: "circle")
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-                .buttonStyle(.plain)
+                TaskRow(task: $tasks[index])
             }
             
             Text("Counter: \(counter)")
@@ -88,6 +68,34 @@ struct ContentView: View {
         }
         .onAppear{greetUser()}
         .padding(20)
+    }
+}
+
+struct TaskRow: View {
+    @Binding var task: ContentView.Task
+
+    var body: some View {
+        Button {
+            task.isCompleted.toggle()
+        } label: {
+            HStack {
+                Text(task.title)
+                    .font(.title2)
+                    .strikethrough(task.isCompleted)
+                    .foregroundStyle(task.isCompleted ? .gray : .primary)
+
+                Spacer()
+
+                if task.isCompleted {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                } else {
+                    Image(systemName: "circle")
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .buttonStyle(.plain)
     }
 }
 
