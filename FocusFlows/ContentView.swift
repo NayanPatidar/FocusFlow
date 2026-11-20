@@ -61,13 +61,21 @@ struct ContentView: View {
                     HStack {
                         Text(tasks[index].title)
                             .font(.title2)
+                            .strikethrough(tasks[index].isCompleted)
+                            .foregroundStyle(tasks[index].isCompleted ? .gray : .primary)
+
+                        Spacer()
 
                         if tasks[index].isCompleted {
                             Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
                         } else {
                             Image(systemName: "circle")
-                        }                    }
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
+                .buttonStyle(.plain)
             }
             
             Text("Counter: \(counter)")
