@@ -42,22 +42,40 @@ struct ContentView: View {
                 }
                 .padding(.top, 30)
                 
-                VStack {
-                    Text("Build Better Habits")
-                        .font(.title3)
-                        .fontWeight(.bold)
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "sparkles")
+                            .font(.title2)
+                            .foregroundStyle(.orange)
+
+                        Text("Build Better Habits")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                    }
 
                     Text("Let's get started!")
                         .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
                 .padding(20)
-                .frame(maxWidth: .infinity, alignment: .center)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .background(.red)
                 .clipShape(RoundedRectangle(cornerRadius: 20))
                 
                 
                 ForEach(tasks.indices, id: \.self) { index in
                     TaskRow(task: $tasks[index])
+                }
+                FocusButton(title: "Add Task") {
+                    print("Adding a task")
+                }
+
+                FocusButton(title: "Add Habit") {
+                    print("Adding a habit")
+                }
+
+                FocusButton(title: "Start Focus") {
+                    print("Starting focus session")
                 }
                 
                 Text("Counter: \(counter)")
