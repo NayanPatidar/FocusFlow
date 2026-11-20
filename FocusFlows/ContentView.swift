@@ -42,11 +42,19 @@ struct ContentView: View {
                 }
                 .padding(.top, 30)
                 
-                Text("Build Better Habits")
-                    .font(.title3)
+                VStack {
+                    Text("Build Better Habits")
+                        .font(.title3)
+                        .fontWeight(.bold)
+
+                    Text("Let's get started!")
+                        .font(.subheadline)
+                }
+                .padding(20)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .background(.red)
+                .clipShape(RoundedRectangle(cornerRadius: 20))
                 
-                Text("Let's get started!")
-                    .font(.subheadline)
                 
                 ForEach(tasks.indices, id: \.self) { index in
                     TaskRow(task: $tasks[index])
