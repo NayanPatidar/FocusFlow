@@ -23,15 +23,15 @@ struct ContentView: View {
         ScrollView {
             LazyVStack(spacing: 20) {
                 HStack {
-                Text("FocusFlow")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                
-                Spacer()
-                
-                Text("My Profile")
-                    .font(.headline)
-                }
+                    Text("FocusFlow")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+
+                    Spacer()
+
+                    Text("My Profile")
+                        .font(.headline)
+                }.frame(maxWidth: .infinity, minHeight: 60)
                 
                 HStack {
                     Text("Text")
