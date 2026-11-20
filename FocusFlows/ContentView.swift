@@ -63,9 +63,14 @@ struct ContentView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 20))
                 
                 
-                ForEach(tasks.indices, id: \.self) { index in
-                    TaskRow(task: $tasks[index])
+                if tasks.isEmpty {
+                    Text("No tasks yet")
+                } else {
+                    ForEach(tasks.indices, id: \.self) { index in
+                        TaskRow(task: $tasks[index])
+                    }
                 }
+                
                 FocusButton(title: "Add Task") {
                     print("Adding a task")
                 }
@@ -80,11 +85,11 @@ struct ContentView: View {
                 
                 Text("Counter: \(counter)")
                 
-                Button("Increase") {
+                FocusButton(title: "Increase Counter") {
                     counter += 1
                 }
                 
-                Button("Decrease") {
+                FocusButton(title: "Decrease Counter") {
                     counter -= 1
                 }
             }
