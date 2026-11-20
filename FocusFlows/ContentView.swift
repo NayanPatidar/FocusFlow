@@ -20,51 +20,53 @@ struct ContentView: View {
     ]
 
     var body: some View {
-        VStack(spacing: 20) {
-            HStack {
+        ScrollView {
+            LazyVStack(spacing: 20) {
+                HStack {
                 Text("FocusFlow")
                     .font(.largeTitle)
                     .fontWeight(.bold)
-
+                
                 Spacer()
-
+                
                 Text("My Profile")
                     .font(.headline)
-            }
-
-            HStack {
-                Text("Text")
+                }
+                
+                HStack {
+                    Text("Text")
+                        .font(.title3)
+                    
+                    Text("Habits")
+                        .font(.title2)
+                }
+                .padding(.top, 30)
+                
+                Text("Build Better Habits")
                     .font(.title3)
-
-                Text("Habits")
-                    .font(.title2)
+                
+                Text("Let's get started!")
+                    .font(.subheadline)
+                
+                ForEach(tasks.indices, id: \.self) { index in
+                    TaskRow(task: $tasks[index])
+                }
+                
+                Text("Counter: \(counter)")
+                
+                Button("Increase") {
+                    counter += 1
+                }
+                
+                Button("Decrease") {
+                    counter -= 1
+                }
             }
-            .padding(.top, 30)
-
-            Text("Build Better Habits")
-                .font(.title3)
-
-            Text("Let's get started!")
-                .font(.subheadline)
-
-            ForEach(tasks.indices, id: \.self) { index in
-                TaskRow(task: $tasks[index])
+            .onAppear {
+                greetUser()
             }
-
-            Text("Counter: \(counter)")
-
-            Button("Increase") {
-                counter += 1
-            }
-
-            Button("Decrease") {
-                counter -= 1
-            }
+            .padding(20)
         }
-        .onAppear {
-            greetUser()
-        }
-        .padding(20)
     }
 }
 
