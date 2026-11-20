@@ -77,11 +77,13 @@ struct ContentView: View {
                 }
                 
                 FocusButton(title: "Add Task") {
-                    tasks.append(
-                        FocusTask(title: newTaskTitle, isCompleted: false)
-                    )
+                    if !newTaskTitle.isEmpty {
+                        tasks.append(
+                            FocusTask(title: newTaskTitle, isCompleted: false)
+                        )
 
-                    newTaskTitle = ""
+                        newTaskTitle = ""
+                    }
                 }
 
                 FocusButton(title: "Add Habit") {
