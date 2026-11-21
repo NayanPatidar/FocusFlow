@@ -1,13 +1,19 @@
+
 import SwiftUI
 import SwiftData
 
 struct FocusTimerView: View {
+
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
+
     @State private var viewModel = TimerViewModel()
+    @State private var showSettings = false
 
     var body: some View {
+
         VStack(spacing: 32) {
+
             header
 
             phaseSelector
@@ -21,6 +27,22 @@ struct FocusTimerView: View {
         .padding()
         .navigationTitle("Focus Timer")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showSettings = true
+                } label: {
+                    Image(systemName: "gearshape")
+                }
+            }
+        }
+        .sheet(isPresented: $showSettings, onDismiss: {
+            viewModel.updateConfiguration()
+        }) {
+            NavigationStack {
+                TimerSettingsView()
+            }
+        }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
                 viewModel.refreshTimer()
@@ -34,7 +56,9 @@ struct FocusTimerView: View {
     // MARK: - Header
 
     private var header: some View {
+
         VStack(spacing: 8) {
+
             Text("Stay focused.")
                 .font(.title2)
                 .fontWeight(.bold)
@@ -47,11 +71,15 @@ struct FocusTimerView: View {
     // MARK: - Phase Selector
 
     private var phaseSelector: some View {
+
         HStack(spacing: 8) {
+
             ForEach(TimerPhase.allCases) { phase in
+
                 Button {
                     viewModel.changePhase(to: phase)
                 } label: {
+
                     Text(phase.rawValue)
                         .font(.subheadline)
                         .fontWeight(.medium)
@@ -76,7 +104,9 @@ struct FocusTimerView: View {
     // MARK: - Timer Circle
 
     private var timerCircle: some View {
+
         ZStack {
+
             Circle()
                 .stroke(
                     Color.gray.opacity(0.15),
@@ -96,6 +126,7 @@ struct FocusTimerView: View {
                 .animation(.easeInOut, value: viewModel.progress)
 
             VStack(spacing: 8) {
+
                 Text(viewModel.currentPhase.rawValue)
                     .font(.headline)
                     .foregroundStyle(.secondary)
@@ -115,7 +146,9 @@ struct FocusTimerView: View {
     // MARK: - Session Info
 
     private var sessionInfo: some View {
+
         HStack(spacing: 12) {
+
             Image(systemName: "checkmark.circle.fill")
                 .foregroundStyle(.green)
 
@@ -134,10 +167,13 @@ struct FocusTimerView: View {
     // MARK: - Controls
 
     private var controls: some View {
+
         HStack(spacing: 16) {
+
             Button {
                 viewModel.reset()
             } label: {
+
                 Image(systemName: "arrow.counterclockwise")
                     .font(.title2)
                     .frame(width: 60, height: 60)
@@ -146,13 +182,17 @@ struct FocusTimerView: View {
             }
 
             Button {
+
                 if viewModel.isRunning {
                     viewModel.pause()
                 } else {
                     viewModel.start()
                 }
+
             } label: {
+
                 HStack(spacing: 10) {
+
                     Image(systemName: viewModel.isRunning ? "pause.fill" : "play.fill")
 
                     Text(viewModel.isRunning ? "Pause" : "Start")

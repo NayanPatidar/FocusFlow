@@ -18,7 +18,7 @@ class TimerViewModel {
 
     @ObservationIgnored
     private var endDate: Date?
-    
+
     @ObservationIgnored
     private var modelContext: ModelContext?
 
@@ -28,9 +28,19 @@ class TimerViewModel {
     init() {
         remainingSeconds = configuration.duration(for: currentPhase)
     }
-    
+
     func setModelContext(_ context: ModelContext) {
         modelContext = context
+    }
+
+    // MARK: - Configuration
+
+    func updateConfiguration() {
+        configuration = TimerConfiguration()
+
+        if !isRunning {
+            remainingSeconds = configuration.duration(for: currentPhase)
+        }
     }
 
     // MARK: - Refresh
@@ -52,7 +62,7 @@ class TimerViewModel {
 
         isRunning = true
         endDate = Date().addingTimeInterval(remainingSeconds)
-        
+
         if currentPhase == .focus && focusStartedAt == nil {
             focusStartedAt = Date()
         }
@@ -64,7 +74,6 @@ class TimerViewModel {
             self?.tick()
         }
 
-        // Schedule notification
         Task {
             await NotificationManager.shared.requestPermission()
 
@@ -126,7 +135,10 @@ class TimerViewModel {
 
         // Save completed focus session
         if completedPhase == .focus {
-            let startedAt = focusStartedAt ?? Date().addingTimeInterval(-configuration.duration(for: .focus))
+
+            let startedAt = focusStartedAt
+                ?? Date().addingTimeInterval(-configuration.duration(for: .focus))
+
             let completedAt = Date()
 
             let session = FocusSession(
@@ -147,12 +159,15 @@ class TimerViewModel {
             focusStartedAt = nil
         }
 
+        // Feedback
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
 
         AudioServicesPlaySystemSound(1005)
 
+        // Determine next phase
         if completedPhase == .focus {
+
             completedFocusSessions += 1
 
             if completedFocusSessions % configuration.sessionsBeforeLongBreak == 0 {
@@ -160,6 +175,7 @@ class TimerViewModel {
             } else {
                 currentPhase = .shortBreak
             }
+
         } else {
             currentPhase = .focus
         }
@@ -168,7 +184,7 @@ class TimerViewModel {
 
         start()
     }
-    
+
     // MARK: - Change Phase
 
     func changePhase(to phase: TimerPhase) {
@@ -190,10 +206,13 @@ class TimerViewModel {
 
     private func notificationMessage(for phase: TimerPhase) -> String {
         switch phase {
+
         case .focus:
             return "Your focus session is complete. Time for a break!"
+
         case .shortBreak:
             return "Your short break is over. Ready to focus again?"
+
         case .longBreak:
             return "Your long break is over. Let's get back to work!"
         }
