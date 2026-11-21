@@ -30,6 +30,13 @@ struct ContentView: View {
             .tabItem {
                 Label("Stats", systemImage: "chart.bar")
             }
+            
+            NavigationStack {
+                FocusTimerView()
+            }
+            .tabItem {
+                Label("Focus", systemImage: "timer")
+            }
         }
     }
 }
