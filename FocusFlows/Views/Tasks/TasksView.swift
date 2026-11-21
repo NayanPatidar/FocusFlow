@@ -87,6 +87,7 @@ struct TasksView: View {
                                 // Edit action handled by TaskRow
                             }
                         )
+                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
                     }
                     .onDelete { offsets in
                         let tasksToDelete = offsets.map {
@@ -100,6 +101,7 @@ struct TasksView: View {
                     }
                 }
             }
+            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: searchedTasks.count)
         }
         .navigationTitle("Tasks")
     }
