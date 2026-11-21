@@ -1,9 +1,12 @@
+
 import Foundation
 import Observation
 import SwiftData
 
 @Observable
 class TaskViewModel {
+
+    // MARK: - Add Task
 
     func addTask(
         title: String,
@@ -12,6 +15,7 @@ class TaskViewModel {
         category: TaskCategory = .other,
         context: ModelContext
     ) {
+
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !trimmedTitle.isEmpty else { return }
@@ -25,32 +29,60 @@ class TaskViewModel {
 
         context.insert(task)
         save(context)
+
+        TaskReminderManager.shared.scheduleReminder(for: task)
+        
+        TaskReminderManager.shared.requestNotificationPermission()
     }
 
+    // MARK: - Delete Task
 
     func deleteTask(
         _ task: FocusTask,
         context: ModelContext
     ) {
+
+        TaskReminderManager.shared.cancelReminder(for: task)
+
         context.delete(task)
         save(context)
     }
-    
-    func deleteTasks(_ tasks: [FocusTask], context: ModelContext) {
+
+    // MARK: - Bulk Delete
+
+    func deleteTasks(
+        _ tasks: [FocusTask],
+        context: ModelContext
+    ) {
+
         for task in tasks {
+            TaskReminderManager.shared.cancelReminder(for: task)
             context.delete(task)
         }
 
-        try? context.save()
+        save(context)
     }
 
-    func toggleTask(_ task: FocusTask, context: ModelContext) {
-        task.isCompleted.toggle()
+    // MARK: - Toggle Task
 
+    func toggleTask(
+        _ task: FocusTask,
+        context: ModelContext
+    ) {
+
+        task.isCompleted.toggle()
         task.completedAt = task.isCompleted ? .now : nil
+
+        if task.isCompleted {
+            TaskReminderManager.shared.cancelReminder(for: task)
+        } else {
+            TaskReminderManager.shared.scheduleReminder(for: task)
+        }
 
         save(context)
     }
+
+    // MARK: - Update Task
 
     func updateTask(
         _ task: FocusTask,
@@ -60,6 +92,7 @@ class TaskViewModel {
         category: TaskCategory,
         context: ModelContext
     ) {
+
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !trimmedTitle.isEmpty else { return }
@@ -69,9 +102,12 @@ class TaskViewModel {
         task.dueDate = dueDate
         task.category = category
 
+        TaskReminderManager.shared.scheduleReminder(for: task)
+
         save(context)
     }
 
+    // MARK: - Filtering & Sorting
 
     func filteredTasks(
         _ tasks: [FocusTask],
@@ -83,6 +119,7 @@ class TaskViewModel {
 
         // Filtering
         switch filter {
+
         case .all:
             break
 
@@ -95,6 +132,7 @@ class TaskViewModel {
 
         // Sorting
         switch sort {
+
         case .none:
             break
 
@@ -105,7 +143,9 @@ class TaskViewModel {
 
         case .dueDate:
             result.sort {
+
                 switch ($0.dueDate, $1.dueDate) {
+
                 case let (lhs?, rhs?):
                     return lhs < rhs
 
@@ -124,18 +164,27 @@ class TaskViewModel {
         return result
     }
 
+    // MARK: - Priority Ranking
+
     private func priorityRank(_ priority: TaskPriority) -> Int {
+
         switch priority {
+
         case .low:
             return 1
+
         case .medium:
             return 2
+
         case .high:
             return 3
         }
     }
 
+    // MARK: - Save
+
     private func save(_ context: ModelContext) {
+
         do {
             try context.save()
         } catch {

@@ -2,6 +2,7 @@
 import SwiftUI
 
 struct TaskInputView: View {
+
     @Binding var newTaskTitle: String
     @Binding var priority: TaskPriority
     @Binding var dueDate: Date?
@@ -13,7 +14,9 @@ struct TaskInputView: View {
     @State private var selectedDate = Date()
 
     var body: some View {
+
         VStack(spacing: 12) {
+
             TextField("Enter a task", text: $newTaskTitle)
                 .textFieldStyle(.roundedBorder)
 
@@ -31,8 +34,12 @@ struct TaskInputView: View {
             }
             .pickerStyle(.segmented)
 
+            // MARK: - Due Date
+
             HStack {
+
                 Button {
+                    selectedDate = dueDate ?? Date()
                     showDatePicker.toggle()
                 } label: {
                     Label(
@@ -44,11 +51,13 @@ struct TaskInputView: View {
                 Spacer()
 
                 if let dueDate {
+
                     Text(dueDate.formatted(date: .abbreviated, time: .omitted))
                         .font(.caption)
 
                     Button {
                         self.dueDate = nil
+                        showDatePicker = false
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(.secondary)
@@ -57,6 +66,7 @@ struct TaskInputView: View {
             }
 
             if showDatePicker {
+
                 DatePicker(
                     "Due Date",
                     selection: $selectedDate,

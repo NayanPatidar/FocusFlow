@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 struct TodayView: View {
     @Environment(\.modelContext) private var context
@@ -42,6 +43,21 @@ struct TodayView: View {
             filter: selectedFilter,
             sort: selectedSort
         )
+    }
+    
+    private func printPendingReminders() {
+        UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
+            print("---- Pending Notifications ----")
+
+            for request in requests {
+                print("ID: \(request.identifier)")
+                print("Title: \(request.content.title)")
+                print("Body: \(request.content.body)")
+                print("Trigger: \(String(describing: request.trigger))")
+            }
+
+            print("-----------------------------")
+        }
     }
     
     private var taskProgressCard: some View {
@@ -305,6 +321,7 @@ struct TodayView: View {
         }
         .onAppear {
             habitViewModel.refreshDailyStatus(habits, context: context)
+            printPendingReminders()
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
