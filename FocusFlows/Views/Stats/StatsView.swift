@@ -58,6 +58,7 @@ struct StatsView: View {
                 WeeklyTaskChart(tasks: tasks)
                 WeeklyHabitChart(habits: habits)
                 HabitStreakSection(habits: habits)
+                ProductivityInsightsView(tasks: tasks, habits: habits)
             }
             .padding()
         }
