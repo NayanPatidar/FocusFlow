@@ -44,11 +44,11 @@ class TaskViewModel {
         try? context.save()
     }
 
-    func toggleTask(
-        _ task: FocusTask,
-        context: ModelContext
-    ) {
+    func toggleTask(_ task: FocusTask, context: ModelContext) {
         task.isCompleted.toggle()
+
+        task.completedAt = task.isCompleted ? .now : nil
+
         save(context)
     }
 

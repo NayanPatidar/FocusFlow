@@ -17,6 +17,7 @@ class FocusTask {
     var priorityRaw: String
     var dueDate: Date?
     var categoryRaw: String
+    var completedAt: Date?
 
     var priority: TaskPriority {
         get {
@@ -42,7 +43,8 @@ class FocusTask {
         isCompleted: Bool = false,
         priority: TaskPriority = .medium,
         dueDate: Date? = nil,
-        category: TaskCategory = .other
+        category: TaskCategory = .other,
+        completedAt: Date? = nil
     ) {
         self.id = id
         self.title = title
@@ -50,5 +52,6 @@ class FocusTask {
         self.priorityRaw = priority.rawValue
         self.dueDate = dueDate
         self.categoryRaw = category.rawValue
+        self.completedAt = completedAt
     }
 }
