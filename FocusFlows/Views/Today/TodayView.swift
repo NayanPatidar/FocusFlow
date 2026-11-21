@@ -1,6 +1,10 @@
 import SwiftUI
+import SwiftData
 
 struct TodayView: View {
+    @Environment(\.modelContext) private var context
+    @Query private var tasks: [FocusTask]
+
     @State private var viewModel = TaskViewModel()
 
     @State private var newTaskTitle = ""
@@ -11,8 +15,18 @@ struct TodayView: View {
     @State private var selectedFilter: TaskFilter = .all
     @State private var selectedSort: TaskSort = .none
 
+    private var completedTasks: Int {
+        tasks.filter { $0.isCompleted }.count
+    }
+
+    private var progress: Double {
+        guard !tasks.isEmpty else { return 0 }
+        return Double(completedTasks) / Double(tasks.count)
+    }
+
     private var displayedTasks: [FocusTask] {
         viewModel.filteredTasks(
+            tasks,
             filter: selectedFilter,
             sort: selectedSort
         )
@@ -45,12 +59,12 @@ struct TodayView: View {
 
                     HStack {
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("\(viewModel.completedTasks) of \(viewModel.totalTasks) tasks completed")
+                            Text("\(completedTasks) of \(tasks.count) tasks completed")
                                 .font(.title3)
                                 .fontWeight(.semibold)
 
                             Text(
-                                viewModel.totalTasks == 0
+                                tasks.isEmpty
                                     ? "Start by adding your tasks"
                                     : "Keep up the good work!"
                             )
@@ -65,7 +79,7 @@ struct TodayView: View {
                             .foregroundStyle(.blue)
                     }
 
-                    ProgressView(value: viewModel.progress)
+                    ProgressView(value: progress)
                         .tint(.blue)
                 }
                 .padding()
@@ -78,7 +92,6 @@ struct TodayView: View {
                         .font(.title2)
                         .fontWeight(.bold)
 
-                    // Add Task
                     TaskInputView(
                         newTaskTitle: $newTaskTitle,
                         priority: $newTaskPriority,
@@ -87,7 +100,8 @@ struct TodayView: View {
                         viewModel.addTask(
                             title: newTaskTitle,
                             priority: newTaskPriority,
-                            dueDate: newTaskDueDate
+                            dueDate: newTaskDueDate,
+                            context: context
                         )
 
                         newTaskTitle = ""
@@ -128,7 +142,7 @@ struct TodayView: View {
                             TaskRow(
                                 task: task,
                                 onToggle: {
-                                    viewModel.toggleTask(id: task.id)
+                                    viewModel.toggleTask(task, context: context)
                                 },
                                 onEdit: {
                                     editingTask = task
@@ -136,7 +150,7 @@ struct TodayView: View {
                             )
                             .swipeActions {
                                 Button(role: .destructive) {
-                                    viewModel.deleteTask(id: task.id)
+                                    viewModel.deleteTask(task, context: context)
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
@@ -150,10 +164,11 @@ struct TodayView: View {
         .sheet(item: $editingTask) { task in
             EditTaskView(task: task) { updatedTitle, updatedPriority, updatedDueDate in
                 viewModel.updateTask(
-                    id: task.id,
+                    task,
                     title: updatedTitle,
                     priority: updatedPriority,
-                    dueDate: updatedDueDate
+                    dueDate: updatedDueDate,
+                    context: context
                 )
             }
         }
@@ -165,10 +180,8 @@ struct TodayView: View {
         switch selectedFilter {
         case .all:
             return "No Tasks Yet"
-
         case .active:
             return "No Active Tasks"
-
         case .completed:
             return "No Completed Tasks"
         }
@@ -177,4 +190,5 @@ struct TodayView: View {
 
 #Preview {
     TodayView()
+        .modelContainer(for: FocusTask.self, inMemory: true)
 }

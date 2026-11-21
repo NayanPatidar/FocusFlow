@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 enum TaskPriority: String, CaseIterable, Identifiable {
     case low = "Low"
@@ -8,12 +9,22 @@ enum TaskPriority: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
-struct FocusTask: Identifiable {
-    let id: UUID
+@Model
+class FocusTask {
+    var id: UUID
     var title: String
     var isCompleted: Bool
-    var priority: TaskPriority
+    var priorityRaw: String
     var dueDate: Date?
+
+    var priority: TaskPriority {
+        get {
+            TaskPriority(rawValue: priorityRaw) ?? .medium
+        }
+        set {
+            priorityRaw = newValue.rawValue
+        }
+    }
 
     init(
         id: UUID = UUID(),
@@ -25,7 +36,7 @@ struct FocusTask: Identifiable {
         self.id = id
         self.title = title
         self.isCompleted = isCompleted
-        self.priority = priority
+        self.priorityRaw = priority.rawValue
         self.dueDate = dueDate
     }
 }

@@ -1,30 +1,17 @@
 import Foundation
 import Observation
+import SwiftData
 
 @Observable
 class TaskViewModel {
-    var tasks: [FocusTask] = []
-
-    var completedTasks: Int {
-        tasks.filter { $0.isCompleted }.count
-    }
-
-    var totalTasks: Int {
-        tasks.count
-    }
-
-    var progress: Double {
-        guard totalTasks > 0 else { return 0 }
-        return Double(completedTasks) / Double(totalTasks)
-    }
 
     func addTask(
         title: String,
         priority: TaskPriority = .medium,
-        dueDate: Date? = nil
+        dueDate: Date? = nil,
+        context: ModelContext
     ) {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-
         guard !trimmedTitle.isEmpty else { return }
 
         let task = FocusTask(
@@ -33,43 +20,49 @@ class TaskViewModel {
             dueDate: dueDate
         )
 
-        tasks.append(task)
+        context.insert(task)
+        save(context)
     }
 
-    func deleteTask(id: UUID) {
-        tasks = tasks.filter { $0.id != id }
+    func deleteTask(
+        _ task: FocusTask,
+        context: ModelContext
+    ) {
+        context.delete(task)
+        save(context)
     }
 
-    func toggleTask(id: UUID) {
-        guard let index = tasks.firstIndex(where: { $0.id == id }) else {
-            return
-        }
-
-        tasks[index].isCompleted.toggle()
+    func toggleTask(
+        _ task: FocusTask,
+        context: ModelContext
+    ) {
+        task.isCompleted.toggle()
+        save(context)
     }
 
     func updateTask(
-        id: UUID,
+        _ task: FocusTask,
         title: String,
         priority: TaskPriority,
-        dueDate: Date?
+        dueDate: Date?,
+        context: ModelContext
     ) {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-
         guard !trimmedTitle.isEmpty else { return }
-        guard let index = tasks.firstIndex(where: { $0.id == id }) else {
-            return
-        }
 
-        tasks[index].title = trimmedTitle
-        tasks[index].priority = priority
-        tasks[index].dueDate = dueDate
+        task.title = trimmedTitle
+        task.priority = priority
+        task.dueDate = dueDate
+
+        save(context)
     }
 
     func filteredTasks(
+        _ tasks: [FocusTask],
         filter: TaskFilter,
         sort: TaskSort
     ) -> [FocusTask] {
+
         var result = tasks
 
         // Filtering
@@ -119,12 +112,18 @@ class TaskViewModel {
         switch priority {
         case .low:
             return 1
-
         case .medium:
             return 2
-
         case .high:
             return 3
+        }
+    }
+
+    private func save(_ context: ModelContext) {
+        do {
+            try context.save()
+        } catch {
+            print("Failed to save task: \(error)")
         }
     }
 }
