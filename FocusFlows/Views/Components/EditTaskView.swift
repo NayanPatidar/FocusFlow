@@ -4,11 +4,20 @@ struct EditTaskView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var title: String
+    @State private var priority: TaskPriority
+    @State private var dueDate: Date?
+    @State private var showDatePicker = false
+    @State private var selectedDate = Date()
 
-    let onSave: (String) -> Void
+    let onSave: (String, TaskPriority, Date?) -> Void
 
-    init(taskTitle: String, onSave: @escaping (String) -> Void) {
-        _title = State(initialValue: taskTitle)
+    init(
+        task: FocusTask,
+        onSave: @escaping (String, TaskPriority, Date?) -> Void
+    ) {
+        _title = State(initialValue: task.title)
+        _priority = State(initialValue: task.priority)
+        _dueDate = State(initialValue: task.dueDate)
         self.onSave = onSave
     }
 
@@ -17,6 +26,43 @@ struct EditTaskView: View {
             Form {
                 Section("Task Name") {
                     TextField("Task title", text: $title)
+                }
+
+                Section("Priority") {
+                    Picker("Priority", selection: $priority) {
+                        ForEach(TaskPriority.allCases) { priority in
+                            Text(priority.rawValue)
+                                .tag(priority)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+
+                Section("Due Date") {
+                    Button(dueDate == nil ? "Set Due Date" : "Change Due Date") {
+                        selectedDate = dueDate ?? Date()
+                        showDatePicker.toggle()
+                    }
+
+                    if showDatePicker {
+                        DatePicker(
+                            "Due Date",
+                            selection: $selectedDate,
+                            in: Date.now...,
+                            displayedComponents: .date
+                        )
+
+                        Button("Confirm Date") {
+                            dueDate = selectedDate
+                            showDatePicker = false
+                        }
+                    }
+
+                    if dueDate != nil {
+                        Button("Remove Due Date", role: .destructive) {
+                            dueDate = nil
+                        }
+                    }
                 }
             }
             .navigationTitle("Edit Task")
@@ -30,7 +76,7 @@ struct EditTaskView: View {
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        onSave(title)
+                        onSave(title, priority, dueDate)
                         dismiss()
                     }
                     .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)

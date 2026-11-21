@@ -18,13 +18,22 @@ class TaskViewModel {
         return Double(completedTasks) / Double(totalTasks)
     }
 
-    func addTask(title: String) {
+    func addTask(
+        title: String,
+        priority: TaskPriority = .medium,
+        dueDate: Date? = nil
+    ) {
         let trimmedTitle = title.trimmingCharacters(in: .whitespaces)
 
         guard !trimmedTitle.isEmpty else { return }
 
         tasks.append(
-            FocusTask(title: trimmedTitle, isCompleted: false)
+            FocusTask(
+                title: trimmedTitle,
+                isCompleted: false,
+                priority: priority,
+                dueDate: dueDate
+            )
         )
     }
 
@@ -33,7 +42,12 @@ class TaskViewModel {
         tasks = updatedTasks
     }
     
-    func updateTask(id: UUID, title: String) {
+    func updateTask(
+        id: UUID,
+        title: String,
+        priority: TaskPriority,
+        dueDate: Date?
+    ) {
         let trimmedTitle = title.trimmingCharacters(in: .whitespaces)
 
         guard !trimmedTitle.isEmpty else { return }
@@ -43,5 +57,7 @@ class TaskViewModel {
         }
 
         tasks[index].title = trimmedTitle
+        tasks[index].priority = priority
+        tasks[index].dueDate = dueDate
     }
 }

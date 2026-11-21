@@ -5,35 +5,60 @@ struct TaskRow: View {
     let onEdit: () -> Void
 
     var body: some View {
-        HStack {
+        HStack(spacing: 12) {
             Button {
                 task.isCompleted.toggle()
             } label: {
-                HStack {
-                    Text(task.title)
-                        .font(.title3)
-                        .strikethrough(task.isCompleted)
-                        .foregroundStyle(task.isCompleted ? .gray : .primary)
-
-                    Spacer()
-
-                    Image(systemName: task.isCompleted
-                          ? "checkmark.circle.fill"
-                          : "circle")
-                        .foregroundStyle(task.isCompleted ? .green : .secondary)
-                }
+                Image(systemName: task.isCompleted
+                      ? "checkmark.circle.fill"
+                      : "circle")
+                    .foregroundStyle(task.isCompleted ? .green : .secondary)
+                    .font(.title2)
             }
             .buttonStyle(.plain)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(task.title)
+                    .strikethrough(task.isCompleted)
+                    .foregroundStyle(task.isCompleted ? .secondary : .primary)
+
+                HStack(spacing: 8) {
+                    Text(task.priority.rawValue)
+                        .font(.caption)
+                        .foregroundStyle(priorityColor)
+
+                    if let dueDate = task.dueDate {
+                        Text("•")
+                            .foregroundStyle(.secondary)
+
+                        Text(dueDate.formatted(date: .abbreviated, time: .omitted))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            Spacer()
 
             Button {
                 onEdit()
             } label: {
                 Image(systemName: "pencil")
                     .foregroundStyle(.secondary)
-                    .padding(.leading, 12)
             }
             .buttonStyle(.plain)
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 8)
+    }
+
+    private var priorityColor: Color {
+        switch task.priority {
+        case .low:
+            return .green
+        case .medium:
+            return .orange
+        case .high:
+            return .red
+        }
     }
 }

@@ -3,6 +3,8 @@ import SwiftUI
 struct TodayView: View {
     @State private var viewModel = TaskViewModel()
     @State private var newTaskTitle = ""
+    @State private var newTaskPriority: TaskPriority = .medium
+    @State private var newTaskDueDate: Date?
     @State private var editingTask: FocusTask?
 
     var body: some View {
@@ -10,7 +12,6 @@ struct TodayView: View {
             VStack(alignment: .leading, spacing: 24) {
                 HeaderView()
 
-                // Greeting
                 VStack(alignment: .leading, spacing: 8) {
                     Text(Date.now.formatted(date: .complete, time: .omitted))
                         .font(.subheadline)
@@ -25,7 +26,7 @@ struct TodayView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                // Progress Card
+                // Progress
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Today's Progress")
                         .font(.headline)
@@ -63,9 +64,20 @@ struct TodayView: View {
                         .font(.title2)
                         .fontWeight(.bold)
 
-                    TaskInputView(newTaskTitle: $newTaskTitle) {
-                        viewModel.addTask(title: newTaskTitle)
+                    TaskInputView(
+                        newTaskTitle: $newTaskTitle,
+                        priority: $newTaskPriority,
+                        dueDate: $newTaskDueDate
+                    ) {
+                        viewModel.addTask(
+                            title: newTaskTitle,
+                            priority: newTaskPriority,
+                            dueDate: newTaskDueDate
+                        )
+
                         newTaskTitle = ""
+                        newTaskPriority = .medium
+                        newTaskDueDate = nil
                     }
 
                     if viewModel.tasks.isEmpty {
@@ -94,8 +106,13 @@ struct TodayView: View {
             .padding()
         }
         .sheet(item: $editingTask) { task in
-            EditTaskView(taskTitle: task.title) { updatedTitle in
-                viewModel.updateTask(id: task.id, title: updatedTitle)
+            EditTaskView(task: task) { updatedTitle, updatedPriority, updatedDueDate in
+                viewModel.updateTask(
+                    id: task.id,
+                    title: updatedTitle,
+                    priority: updatedPriority,
+                    dueDate: updatedDueDate
+                )
             }
         }
         .navigationTitle("")
