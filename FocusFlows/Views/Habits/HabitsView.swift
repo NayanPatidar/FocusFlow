@@ -10,21 +10,18 @@ struct HabitsView: View {
     @State private var newHabitName = ""
     @State private var editingHabit: Habit?
 
+    private var completedCount: Int {
+        habits.filter { $0.isCompletedToday }.count
+    }
+
+    private var progress: Double {
+        guard !habits.isEmpty else { return 0 }
+        return Double(completedCount) / Double(habits.count)
+    }
+
     var body: some View {
         VStack(spacing: 20) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Habits")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-
-                    Text("Build consistency, one day at a time.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-            }
+            progressCard
 
             HStack(spacing: 12) {
                 TextField("Enter a habit", text: $newHabitName)
@@ -89,6 +86,37 @@ struct HabitsView: View {
                 }
             }
         }
+    }
+
+    private var progressCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Today's Progress")
+                        .font(.headline)
+
+                    Text("Keep your momentum going!")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Text("\(completedCount)/\(habits.count)")
+                    .font(.title2)
+                    .fontWeight(.bold)
+            }
+
+            ProgressView(value: progress)
+                .tint(.green)
+
+            Text("\(Int(progress * 100))% completed")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding()
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 
     private func addHabit() {
