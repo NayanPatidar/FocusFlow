@@ -13,6 +13,7 @@ struct HabitsView: View {
     @State private var editingHabit: Habit?
 
     @State private var newHabitReminderEnabled = false
+
     @State private var newHabitReminderTime = Calendar.current.date(
         bySettingHour: 9,
         minute: 0,
@@ -39,6 +40,7 @@ struct HabitsView: View {
             VStack(alignment: .leading, spacing: 12) {
 
                 HStack(spacing: 12) {
+
                     TextField("Enter a habit", text: $newHabitName)
                         .textFieldStyle(.roundedBorder)
 
@@ -71,10 +73,10 @@ struct HabitsView: View {
             // MARK: - Habit List
 
             if habits.isEmpty {
-                ContentUnavailableView(
-                    "No Habits Yet",
+                EmptyStateView(
                     systemImage: "repeat",
-                    description: Text("Add your first habit to get started.")
+                    title: "No Habits Yet",
+                    message: "Build consistency by adding your first daily habit."
                 )
             } else {
                 List {
@@ -82,13 +84,19 @@ struct HabitsView: View {
                         HabitRow(
                             habit: habit,
                             onToggle: {
-                                habitViewModel.toggleHabit(habit, context: context)
+                                habitViewModel.toggleHabit(
+                                    habit,
+                                    context: context
+                                )
                             },
                             onEdit: {
                                 editingHabit = habit
                             },
                             onDelete: {
-                                habitViewModel.deleteHabit(habit, context: context)
+                                habitViewModel.deleteHabit(
+                                    habit,
+                                    context: context
+                                )
                             }
                         )
                         .listRowSeparator(.hidden)
