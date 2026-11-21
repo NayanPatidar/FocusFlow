@@ -1,4 +1,3 @@
-
 import SwiftUI
 
 struct HabitRow: View {
@@ -18,7 +17,6 @@ struct HabitRow: View {
 
     private var reminderFormattedTime: String {
         guard let reminderTime = habit.reminderTime else { return "" }
-
         return reminderTime.formatted(date: .omitted, time: .shortened)
     }
 
@@ -28,7 +26,9 @@ struct HabitRow: View {
             HStack(spacing: 12) {
 
                 Button {
-                    onToggle()
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.65)) {
+                        onToggle()
+                    }
                 } label: {
                     Image(systemName: habit.isCompletedToday
                           ? "checkmark.circle.fill"
@@ -37,6 +37,7 @@ struct HabitRow: View {
                         .foregroundStyle(
                             habit.isCompletedToday ? .green : .secondary
                         )
+                        .scaleEffect(habit.isCompletedToday ? 1.1 : 1.0)
                 }
                 .buttonStyle(.plain)
 
@@ -95,5 +96,6 @@ struct HabitRow: View {
         .padding()
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 12))
+        .animation(.easeInOut(duration: 0.25), value: habit.isCompletedToday)
     }
 }
