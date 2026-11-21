@@ -104,6 +104,25 @@ struct HabitsView: View {
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
                         .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button {
+                                editingHabit = habit
+                            } label: {
+                                Label("Edit", systemImage: "pencil")
+                            }
+                            .tint(.blue)
+
+                            Button(role: .destructive) {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                    habitViewModel.deleteHabit(
+                                        habit,
+                                        context: context
+                                    )
+                                }
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                     }
                 }
                 .listStyle(.plain)

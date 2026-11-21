@@ -22,12 +22,15 @@ struct TaskRow: View {
                     .scaleEffect(task.isCompleted ? 1.1 : 1.0)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(task.isCompleted ? "Mark task incomplete" : "Mark task complete")
+            .accessibilityHint("Double tap to change task completion status")
 
             VStack(alignment: .leading, spacing: 6) {
 
                 Text(task.title)
                     .strikethrough(task.isCompleted)
                     .foregroundStyle(task.isCompleted ? .secondary : .primary)
+                    .accessibilityAddTraits(.isHeader)
 
                 HStack(spacing: 8) {
                     Text(task.category.rawValue)
