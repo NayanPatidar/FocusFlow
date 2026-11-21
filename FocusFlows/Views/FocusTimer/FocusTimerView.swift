@@ -2,6 +2,7 @@
 import SwiftUI
 
 struct FocusTimerView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @State private var viewModel = TimerViewModel()
 
     var body: some View {
@@ -19,6 +20,11 @@ struct FocusTimerView: View {
         .padding()
         .navigationTitle("Focus Timer")
         .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                viewModel.refreshTimer()
+            }
+        }
     }
 
     // MARK: - Header

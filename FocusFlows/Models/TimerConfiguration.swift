@@ -1,10 +1,9 @@
-
 import Foundation
 
 struct TimerConfiguration {
-    var focusDuration: Int = 25
+    var focusDuration: Int = 1
     var shortBreakDuration: Int = 5
-    var longBreakDuration: Int = 15
+    var longBreakDuration: Int = 10
     var sessionsBeforeLongBreak: Int = 4
 
     func duration(for phase: TimerPhase) -> TimeInterval {
@@ -12,9 +11,9 @@ struct TimerConfiguration {
         case .focus:
             return TimeInterval(focusDuration * 60)
         case .shortBreak:
-            return TimeInterval(shortBreakDuration * 60)
+            return TimeInterval(shortBreakDuration)
         case .longBreak:
-            return TimeInterval(longBreakDuration * 60)
+            return TimeInterval(longBreakDuration)
         }
     }
 }

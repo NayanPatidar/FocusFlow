@@ -1,6 +1,8 @@
 
 import Foundation
 import Observation
+import UIKit
+import AudioToolbox
 
 @Observable
 class TimerViewModel {
@@ -19,6 +21,18 @@ class TimerViewModel {
 
     init() {
         remainingSeconds = configuration.duration(for: currentPhase)
+    }
+    
+    // MARK: - Refresh
+    
+    func refreshTimer() {
+        guard isRunning, let endDate else { return }
+
+        remainingSeconds = max(0, endDate.timeIntervalSinceNow)
+
+        if remainingSeconds <= 0 {
+            completePhase()
+        }
     }
 
     // MARK: - Start
@@ -78,6 +92,11 @@ class TimerViewModel {
         isRunning = false
         endDate = nil
 
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+        
+        AudioServicesPlaySystemSound(1005)
+
         if currentPhase == .focus {
             completedFocusSessions += 1
 
@@ -91,8 +110,6 @@ class TimerViewModel {
         }
 
         remainingSeconds = configuration.duration(for: currentPhase)
-
-        // Automatically start the next phase
         start()
     }
 
