@@ -9,6 +9,8 @@ struct TasksView: View {
     @State private var searchText = ""
     @State private var selectedFilter: TaskFilter = .all
     @State private var selectedSort: TaskSort = .none
+    @State private var deletedTask: FocusTask?
+    @State private var showSnackbar = false
 
     private let viewModel = TaskViewModel()
 
@@ -88,14 +90,15 @@ struct TasksView: View {
                             }
                         )
                         .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button(role: .destructive) {
+                                deletedTask = task
+
                                 withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                    viewModel.deleteTasks(
-                                        [task],
-                                        context: context
-                                    )
+                                    viewModel.deleteTask(task, context: context)
                                 }
+
+                                showSnackbar = true
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
@@ -106,15 +109,54 @@ struct TasksView: View {
                             searchedTasks[$0]
                         }
 
-                        viewModel.deleteTasks(
-                            tasksToDelete,
-                            context: context
-                        )
+                        guard let task = tasksToDelete.first, tasksToDelete.count == 1 else {
+                            viewModel.deleteTasks(tasksToDelete, context: context)
+                            return
+                        }
+
+                        deletedTask = task
+
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                            viewModel.deleteTask(task, context: context)
+                        }
+
+                        showSnackbar = true
                     }
                 }
             }
             .animation(.spring(response: 0.35, dampingFraction: 0.8), value: searchedTasks.count)
         }
         .navigationTitle("Tasks")
+        .overlay(alignment: .bottom) {
+            if showSnackbar, let deletedTask {
+                SnackbarView(
+                    message: "Task deleted",
+                    actionTitle: "UNDO"
+                ) {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                        viewModel.restoreTask(deletedTask, context: context)
+                    }
+
+                    showSnackbar = false
+                    self.deletedTask = nil
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 12)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: showSnackbar)
+        .task(id: showSnackbar) {
+            guard showSnackbar else { return }
+
+            do {
+                try await Task.sleep(for: .seconds(4))
+            } catch {
+                return
+            }
+
+            showSnackbar = false
+            deletedTask = nil
+        }
     }
 }

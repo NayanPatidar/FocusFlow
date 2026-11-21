@@ -48,6 +48,21 @@ class TaskViewModel {
         save(context)
     }
 
+    // MARK: - Restore Task
+
+    func restoreTask(
+        _ task: FocusTask,
+        context: ModelContext
+    ) {
+
+        context.insert(task)
+        save(context)
+
+        if !task.isCompleted {
+            TaskReminderManager.shared.scheduleReminder(for: task)
+        }
+    }
+
     // MARK: - Bulk Delete
 
     func deleteTasks(
