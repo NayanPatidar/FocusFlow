@@ -50,6 +50,12 @@ struct StatsView: View {
             VStack(spacing: 20) {
 
                 header
+                
+                ActivityCalendarView(
+                    tasks: tasks,
+                    habits: habits,
+                    focusSessions: focusSessions
+                )
 
                 LazyVGrid(
                     columns: [

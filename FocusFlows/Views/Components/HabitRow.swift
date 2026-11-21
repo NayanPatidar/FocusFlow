@@ -2,6 +2,7 @@
 import SwiftUI
 
 struct HabitRow: View {
+
     let habit: Habit
     let onToggle: () -> Void
     let onEdit: () -> Void
@@ -15,9 +16,17 @@ struct HabitRow: View {
         HabitStreakCalculator.longestStreak(for: habit)
     }
 
+    private var reminderFormattedTime: String {
+        guard let reminderTime = habit.reminderTime else { return "" }
+
+        return reminderTime.formatted(date: .omitted, time: .shortened)
+    }
+
     var body: some View {
         VStack(spacing: 12) {
+
             HStack(spacing: 12) {
+
                 Button {
                     onToggle()
                 } label: {
@@ -32,6 +41,7 @@ struct HabitRow: View {
                 .buttonStyle(.plain)
 
                 VStack(alignment: .leading, spacing: 4) {
+
                     Text(habit.name)
                         .font(.headline)
                         .strikethrough(habit.isCompletedToday)
@@ -39,6 +49,15 @@ struct HabitRow: View {
                     Text(habit.isCompletedToday ? "Completed today" : "Not completed")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+
+                    if let reminderTime = habit.reminderTime {
+                        Label(
+                            reminderTime.formatted(date: .omitted, time: .shortened),
+                            systemImage: "bell.fill"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                    }
                 }
 
                 Spacer()
