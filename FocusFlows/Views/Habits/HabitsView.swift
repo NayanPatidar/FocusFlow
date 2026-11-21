@@ -4,9 +4,10 @@ import SwiftData
 
 struct HabitsView: View {
     @Environment(\.modelContext) private var context
-    @Query(sort: \Habit.createdAt, order: .reverse) private var habits: [Habit]
+    @Query(sort: \Habit.createdAt, order: .reverse)
+    private var habits: [Habit]
 
-    @State private var viewModel = HabitViewModel()
+    @State private var habitViewModel = HabitViewModel()
     @State private var newHabitName = ""
     @State private var editingHabit: Habit?
 
@@ -51,13 +52,13 @@ struct HabitsView: View {
                         HabitRow(
                             habit: habit,
                             onToggle: {
-                                viewModel.toggleHabit(habit, context: context)
+                                habitViewModel.toggleHabit(habit, context: context)
                             },
                             onEdit: {
                                 editingHabit = habit
                             },
                             onDelete: {
-                                viewModel.deleteHabit(habit, context: context)
+                                habitViewModel.deleteHabit(habit, context: context)
                             }
                         )
                         .listRowSeparator(.hidden)
@@ -73,7 +74,7 @@ struct HabitsView: View {
         .navigationTitle("Habits")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            viewModel.refreshDailyStatus(habits, context: context)
+            habitViewModel.refreshDailyStatus(habits, context: context)
         }
         .sheet(item: $editingHabit) { habit in
             EditHabitView(habit: habit) { updatedName in
@@ -120,7 +121,7 @@ struct HabitsView: View {
     }
 
     private func addHabit() {
-        viewModel.addHabit(name: newHabitName, context: context)
+        habitViewModel.addHabit(name: newHabitName, context: context)
         newHabitName = ""
     }
 }

@@ -4,8 +4,10 @@ import SwiftData
 struct TodayView: View {
     @Environment(\.modelContext) private var context
     @Query private var tasks: [FocusTask]
+    @Query private var habits: [Habit]
 
     @State private var viewModel = TaskViewModel()
+    @State private var habitViewModel = HabitViewModel()
 
     @State private var newTaskTitle = ""
     @State private var newTaskPriority: TaskPriority = .medium
@@ -15,6 +17,15 @@ struct TodayView: View {
     @State private var editingTask: FocusTask?
     @State private var selectedFilter: TaskFilter = .all
     @State private var selectedSort: TaskSort = .none
+    
+    private var completedTaskCount: Int {
+        tasks.filter { $0.isCompleted }.count
+    }
+
+    private var taskProgress: Double {
+        guard !tasks.isEmpty else { return 0 }
+        return Double(completedTaskCount) / Double(tasks.count)
+    }
 
     private var completedTasks: Int {
         tasks.filter { $0.isCompleted }.count
@@ -32,11 +43,128 @@ struct TodayView: View {
             sort: selectedSort
         )
     }
+    
+    private var taskProgressCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Task Progress")
+                        .font(.headline)
+
+                    Text("Keep moving forward.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Text("\(completedTaskCount)/\(tasks.count)")
+                    .font(.title2)
+                    .fontWeight(.bold)
+            }
+
+            ProgressView(value: taskProgress)
+                .tint(.blue)
+
+            Text("\(Int(taskProgress * 100))% completed")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding()
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+    
+    private var todayTasks: [FocusTask] {
+        tasks.filter { !$0.isCompleted }
+    }
+    
+    private var todayHabits: [Habit] {
+        habits
+    }
+    
+    private var todayTasksSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Today's Tasks")
+                    .font(.title3)
+                    .fontWeight(.bold)
+
+                Spacer()
+
+                Text("\(todayTasks.count) remaining")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if todayTasks.isEmpty {
+                ContentUnavailableView(
+                    "All Caught Up!",
+                    systemImage: "checkmark.circle.fill",
+                    description: Text("You've completed all your tasks.")
+                )
+            } else {
+                ForEach(todayTasks) { task in
+                    TaskRow(
+                        task: task,
+                        onToggle: {
+                            viewModel.toggleTask(task, context: context)
+                        },
+                        onEdit: {
+                            editingTask = task
+                        }
+                    )
+                }
+            }
+        }
+    }
+    
+    private var habitsPreviewSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Today's Habits")
+                    .font(.title3)
+                    .fontWeight(.bold)
+
+                Spacer()
+
+                Text("\(habits.filter { $0.isCompletedToday }.count)/\(habits.count)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if todayHabits.isEmpty {
+                ContentUnavailableView(
+                    "No Habits Yet",
+                    systemImage: "repeat",
+                    description: Text("Create habits to build your daily routine.")
+                )
+            } else {
+                ForEach(todayHabits) { habit in
+                    HabitRow(
+                        habit: habit,
+                        onToggle: {
+                            habitViewModel.toggleHabit(habit, context: context)
+                        },
+                        onEdit: {
+                            // No editing action on the dashboard for now.
+                        },
+                        onDelete: {
+                            // No deletion action on the dashboard for now.
+                        }
+                    )
+                }
+            }
+        }
+    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 HeaderView()
+                taskProgressCard
+                todayTasksSection
+                habitsPreviewSection
 
                 // Greeting
                 VStack(alignment: .leading, spacing: 8) {
@@ -174,6 +302,9 @@ struct TodayView: View {
                     context: context
                 )
             }
+        }
+        .onAppear {
+            habitViewModel.refreshDailyStatus(habits, context: context)
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
