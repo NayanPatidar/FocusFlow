@@ -56,6 +56,7 @@ struct StatsView: View {
                 }
 
                 WeeklyTaskChart(tasks: tasks)
+                WeeklyHabitChart(habits: habits)
             }
             .padding()
         }
