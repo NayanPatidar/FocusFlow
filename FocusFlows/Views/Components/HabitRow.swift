@@ -111,5 +111,6 @@ struct HabitRow: View {
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .animation(.easeInOut(duration: 0.25), value: habit.isCompletedToday)
+        .sensoryFeedback(.success, trigger: habit.isCompletedToday)
     }
 }

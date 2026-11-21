@@ -65,6 +65,7 @@ struct TaskRow: View {
         }
         .padding(.vertical, 8)
         .animation(.easeInOut(duration: 0.25), value: task.isCompleted)
+        .sensoryFeedback(.success, trigger: task.isCompleted)
     }
 
     private var priorityColor: Color {
