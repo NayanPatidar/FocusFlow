@@ -1,4 +1,3 @@
-
 import SwiftUI
 
 struct TaskInputView: View {
@@ -13,12 +12,19 @@ struct TaskInputView: View {
     @State private var showDatePicker = false
     @State private var selectedDate = Date()
 
+    @FocusState private var isTaskFieldFocused: Bool
+
     var body: some View {
 
         VStack(spacing: 12) {
 
             TextField("Enter a task", text: $newTaskTitle)
                 .textFieldStyle(.roundedBorder)
+                .focused($isTaskFieldFocused)
+                .submitLabel(.done)
+                .onSubmit {
+                    addTask()
+                }
 
             Picker("Category", selection: $category) {
                 ForEach(TaskCategory.allCases) { category in
@@ -36,55 +42,92 @@ struct TaskInputView: View {
 
             // MARK: - Due Date
 
-            HStack {
+            VStack(alignment: .leading, spacing: 10) {
 
-                Button {
-                    selectedDate = dueDate ?? Date()
-                    showDatePicker.toggle()
-                } label: {
-                    Label(
-                        dueDate == nil ? "Set Due Date" : "Change Due Date",
-                        systemImage: "calendar"
-                    )
-                }
-
-                Spacer()
-
-                if let dueDate {
-
-                    Text(dueDate.formatted(date: .abbreviated, time: .omitted))
-                        .font(.caption)
-
+                HStack {
                     Button {
-                        self.dueDate = nil
+                        isTaskFieldFocused = false
+                        dueDate = Calendar.current.startOfDay(for: Date())
                         showDatePicker = false
                     } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.secondary)
+                        Label("Today", systemImage: "sun")
+                    }
+
+                    Button {
+                        isTaskFieldFocused = false
+                        dueDate = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: Date()))
+                        showDatePicker = false
+                    } label: {
+                        Label("Tomorrow", systemImage: "sunrise")
                     }
                 }
-            }
 
-            if showDatePicker {
+                HStack {
 
-                DatePicker(
-                    "Due Date",
-                    selection: $selectedDate,
-                    in: Date.now...,
-                    displayedComponents: .date
-                )
-                .datePickerStyle(.compact)
+                    Button {
+                        selectedDate = dueDate ?? Date()
+                        showDatePicker.toggle()
+                        isTaskFieldFocused = false
+                    } label: {
+                        Label(
+                            dueDate == nil ? "Choose Date" : "Change Date",
+                            systemImage: "calendar"
+                        )
+                    }
 
-                Button("Confirm Date") {
-                    dueDate = selectedDate
-                    showDatePicker = false
+                    Spacer()
+
+                    if let dueDate {
+                        Text(dueDate.formatted(date: .abbreviated, time: .omitted))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        Button {
+                            self.dueDate = nil
+                            showDatePicker = false
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                        .accessibilityLabel("Remove due date")
+                    }
                 }
-                .font(.subheadline)
+
+                if showDatePicker {
+
+                    DatePicker(
+                        "Due Date",
+                        selection: $selectedDate,
+                        in: Date.now...,
+                        displayedComponents: .date
+                    )
+                    .datePickerStyle(.compact)
+
+                    Button("Confirm Date") {
+                        dueDate = selectedDate
+                        showDatePicker = false
+                    }
+                    .font(.subheadline)
+                }
             }
 
             FocusButton(title: "Add Task") {
-                onAddTask()
+                addTask()
             }
         }
+    }
+
+    // MARK: - Add Task
+
+    private func addTask() {
+
+        guard !newTaskTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return
+        }
+
+        isTaskFieldFocused = false
+        showDatePicker = false
+
+        onAddTask()
     }
 }
