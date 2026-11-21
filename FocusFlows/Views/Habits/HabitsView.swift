@@ -12,6 +12,8 @@ struct HabitsView: View {
     @State private var newHabitName = ""
     @State private var editingHabit: Habit?
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     @State private var newHabitReminderEnabled = false
 
     @State private var newHabitReminderTime = Calendar.current.date(
@@ -64,8 +66,10 @@ struct HabitsView: View {
                         selection: $newHabitReminderTime,
                         displayedComponents: .hourAndMinute
                     )
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: newHabitReminderEnabled)
             .padding()
             .background(Color(.secondarySystemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 16))

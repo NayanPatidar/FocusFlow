@@ -44,6 +44,7 @@ struct HabitRow: View {
                             habit.isCompletedToday ? .green : .secondary
                         )
                         .scaleEffect(habit.isCompletedToday ? 1.1 : 1.0)
+                        .symbolEffect(.bounce, value: reduceMotion ? false : habit.isCompletedToday)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(

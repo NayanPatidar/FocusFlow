@@ -12,6 +12,8 @@ struct TaskInputView: View {
     @State private var showDatePicker = false
     @State private var selectedDate = Date()
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     @FocusState private var isTaskFieldFocused: Bool
 
     var body: some View {
@@ -110,6 +112,9 @@ struct TaskInputView: View {
                     .font(.subheadline)
                 }
             }
+            .transition(.opacity)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: showDatePicker)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: dueDate)
 
             FocusButton(title: "Add Task") {
                 addTask()

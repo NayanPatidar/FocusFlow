@@ -1,312 +1,131 @@
 import SwiftUI
 import SwiftData
-import UserNotifications
 
 struct TodayView: View {
+
+    @Binding var selectedTab: AppTab
+
     @Environment(\.modelContext) private var context
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     @Query private var tasks: [FocusTask]
-    @Query private var habits: [Habit]
+    @Query(sort: \Habit.createdAt) private var habits: [Habit]
 
     @State private var viewModel = TaskViewModel()
     @State private var habitViewModel = HabitViewModel()
 
+    @State private var editingTask: FocusTask?
+    @State private var showTaskOptions = false
+    @State private var showCompleted = false
+
+    // Full-options sheet state
     @State private var newTaskTitle = ""
     @State private var newTaskPriority: TaskPriority = .medium
-    @State private var newTaskDueDate: Date?
+    @State private var newTaskDueDate: Date? = Calendar.current.startOfDay(for: .now)
     @State private var newTaskCategory: TaskCategory = .other
 
-    @State private var editingTask: FocusTask?
-    @State private var selectedFilter: TaskFilter = .all
-    @State private var selectedSort: TaskSort = .none
-    
-    private var completedTaskCount: Int {
-        tasks.filter { $0.isCompleted }.count
+    private let maxVisibleTasks = 5
+
+    // MARK: - Derived data
+
+    private var startOfToday: Date {
+        Calendar.current.startOfDay(for: .now)
     }
 
-    private var taskProgress: Double {
-        guard !tasks.isEmpty else { return 0 }
-        return Double(completedTaskCount) / Double(tasks.count)
-    }
-
-    private var completedTasks: Int {
-        tasks.filter { $0.isCompleted }.count
-    }
-
-    private var progress: Double {
-        guard !tasks.isEmpty else { return 0 }
-        return Double(completedTasks) / Double(tasks.count)
-    }
-
-    private var displayedTasks: [FocusTask] {
-        viewModel.filteredTasks(
-            tasks,
-            filter: selectedFilter,
-            sort: selectedSort
-        )
-    }
-    
-    private func printPendingReminders() {
-        UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
-            print("---- Pending Notifications ----")
-
-            for request in requests {
-                print("ID: \(request.identifier)")
-                print("Title: \(request.content.title)")
-                print("Body: \(request.content.body)")
-                print("Trigger: \(String(describing: request.trigger))")
-            }
-
-            print("-----------------------------")
-        }
-    }
-    
-    private var taskProgressCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Task Progress")
-                        .font(.headline)
-
-                    Text("Keep moving forward.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                Text("\(completedTaskCount)/\(tasks.count)")
-                    .font(.title2)
-                    .fontWeight(.bold)
-            }
-
-            ProgressView(value: taskProgress)
-                .tint(.blue)
-
-            Text("\(Int(taskProgress * 100))% completed")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding()
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-    }
-    
+    /// Incomplete tasks that are overdue, due today, or have no due date.
+    /// Overdue first, then by priority.
     private var todayTasks: [FocusTask] {
-        tasks.filter { !$0.isCompleted }
-    }
-    
-    private var todayHabits: [Habit] {
-        habits
-    }
-    
-    private var todayTasksSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Today's Tasks")
-                    .font(.title3)
-                    .fontWeight(.bold)
+        let endOfToday = Calendar.current.date(byAdding: .day, value: 1, to: startOfToday) ?? .now
 
-                Spacer()
-
-                Text("\(todayTasks.count) remaining")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+        return tasks
+            .filter { task in
+                guard !task.isCompleted else { return false }
+                guard let due = task.dueDate else { return true }
+                return due < endOfToday
             }
-
-            if todayTasks.isEmpty {
-                ContentUnavailableView(
-                    "All Caught Up!",
-                    systemImage: "checkmark.circle.fill",
-                    description: Text("You've completed all your tasks.")
-                )
-            } else {
-                ForEach(todayTasks) { task in
-                    TaskRow(
-                        task: task,
-                        onToggle: {
-                            viewModel.toggleTask(task, context: context)
-                        },
-                        onEdit: {
-                            editingTask = task
-                        }
-                    )
-                }
+            .sorted { lhs, rhs in
+                let lhsOverdue = isOverdue(lhs)
+                let rhsOverdue = isOverdue(rhs)
+                if lhsOverdue != rhsOverdue { return lhsOverdue }
+                return priorityRank(lhs.priority) > priorityRank(rhs.priority)
             }
+    }
+
+    private var completedTodayTasks: [FocusTask] {
+        tasks.filter { task in
+            guard task.isCompleted, let completedAt = task.completedAt else { return false }
+            return Calendar.current.isDateInToday(completedAt)
         }
     }
-    
-    private var habitsPreviewSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Today's Habits")
-                    .font(.title3)
-                    .fontWeight(.bold)
 
-                Spacer()
+    private var completedHabitCount: Int {
+        habits.filter { $0.isCompletedToday }.count
+    }
 
-                Text("\(habits.filter { $0.isCompletedToday }.count)/\(habits.count)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            if todayHabits.isEmpty {
-                ContentUnavailableView(
-                    "No Habits Yet",
-                    systemImage: "repeat",
-                    description: Text("Create habits to build your daily routine.")
-                )
-            } else {
-                ForEach(todayHabits) { habit in
-                    HabitRow(
-                        habit: habit,
-                        onToggle: {
-                            habitViewModel.toggleHabit(habit, context: context)
-                        },
-                        onEdit: {
-                            // No editing action on the dashboard for now.
-                        },
-                        onDelete: {
-                            // No deletion action on the dashboard for now.
-                        }
-                    )
-                }
-            }
+    private var greeting: String {
+        switch Calendar.current.component(.hour, from: .now) {
+        case 5..<12: return "Good morning"
+        case 12..<17: return "Good afternoon"
+        default: return "Good evening"
         }
     }
+
+    private func isOverdue(_ task: FocusTask) -> Bool {
+        guard !task.isCompleted, let due = task.dueDate else { return false }
+        return due < startOfToday
+    }
+
+    private func priorityRank(_ priority: TaskPriority) -> Int {
+        switch priority {
+        case .low: return 1
+        case .medium: return 2
+        case .high: return 3
+        }
+    }
+
+    private var listAnimation: Animation? {
+        reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.8)
+    }
+
+    // MARK: - Body
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                HeaderView()
-                taskProgressCard
-                todayTasksSection
-                habitsPreviewSection
+                header
 
-                // Greeting
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(Date.now.formatted(date: .complete, time: .omitted))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                TodaySummaryCard(
+                    tasksDone: completedTodayTasks.count,
+                    tasksTotal: completedTodayTasks.count + todayTasks.count,
+                    habitsDone: completedHabitCount,
+                    habitsTotal: habits.count
+                )
 
-                    Text("Good morning!")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-
-                    Text("Let's make today count.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-
-                // Progress
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Today's Progress")
-                        .font(.headline)
-
-                    HStack {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("\(completedTasks) of \(tasks.count) tasks completed")
-                                .font(.title3)
-                                .fontWeight(.semibold)
-
-                            Text(tasks.isEmpty
-                                 ? "Start by adding your tasks"
-                                 : "Keep up the good work!")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Spacer()
-
-                        Image(systemName: "chart.pie")
-                            .font(.system(size: 40))
-                            .foregroundStyle(.blue)
-                    }
-
-                    ProgressView(value: progress)
-                        .tint(.blue)
-                }
-                .padding()
-                .background(Color(.secondarySystemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 20))
-
-                // Tasks
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Today's Tasks")
-                        .font(.title2)
-                        .fontWeight(.bold)
-
-                    TaskInputView(
-                        newTaskTitle: $newTaskTitle,
-                        priority: $newTaskPriority,
-                        dueDate: $newTaskDueDate,
-                        category: $newTaskCategory
-                    ) {
-                        viewModel.addTask(
-                            title: newTaskTitle,
-                            priority: newTaskPriority,
-                            dueDate: newTaskDueDate,
-                            category: newTaskCategory,
-                            context: context
-                        )
-
-                        newTaskTitle = ""
-                        newTaskPriority = .medium
-                        newTaskDueDate = nil
-                        newTaskCategory = .other
-                    }
-
-                    // Filter
-                    Picker("Filter", selection: $selectedFilter) {
-                        ForEach(TaskFilter.allCases) { filter in
-                            Text(filter.rawValue)
-                                .tag(filter)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-
-                    // Sort
-                    Picker("Sort", selection: $selectedSort) {
-                        ForEach(TaskSort.allCases) { sort in
-                            Text(sort.rawValue)
-                                .tag(sort)
-                        }
-                    }
-                    .pickerStyle(.menu)
-
-                    // Task list
-                    if displayedTasks.isEmpty {
-                        ContentUnavailableView(
-                            emptyTitle,
-                            systemImage: "checklist",
-                            description: Text(
-                                "Tasks matching this filter will appear here."
+                QuickAddTaskBar(
+                    onAdd: { title in
+                        withAnimation(listAnimation) {
+                            viewModel.addTask(
+                                title: title,
+                                dueDate: startOfToday,
+                                context: context
                             )
-                        )
-                        .padding(.vertical, 20)
-                    } else {
-                        ForEach(displayedTasks) { task in
-                            TaskRow(
-                                task: task,
-                                onToggle: {
-                                    viewModel.toggleTask(task, context: context)
-                                },
-                                onEdit: {
-                                    editingTask = task
-                                }
-                            )
-                            .swipeActions {
-                                Button(role: .destructive) {
-                                    viewModel.deleteTask(task, context: context)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                            }
                         }
+                    },
+                    onShowOptions: {
+                        showTaskOptions = true
                     }
-                }
+                )
+
+                tasksSection
+                habitsSection
+                focusShortcut
             }
             .padding()
         }
+        .scrollDismissesKeyboard(.interactively)
+        .animation(listAnimation, value: todayTasks.count)
+        .animation(listAnimation, value: completedTodayTasks.count)
+        .toolbar(.hidden, for: .navigationBar)
         .sheet(item: $editingTask) { task in
             EditTaskView(task: task) { updatedTitle, updatedPriority, updatedDueDate, updatedCategory in
                 viewModel.updateTask(
@@ -319,24 +138,229 @@ struct TodayView: View {
                 )
             }
         }
+        .sheet(isPresented: $showTaskOptions) {
+            taskOptionsSheet
+        }
         .onAppear {
             habitViewModel.refreshDailyStatus(habits, context: context)
-            printPendingReminders()
         }
-        .navigationTitle("")
-        .navigationBarTitleDisplayMode(.inline)
     }
 
-    private var emptyTitle: String {
-        switch selectedFilter {
-        case .all: return "No Tasks Yet"
-        case .active: return "No Active Tasks"
-        case .completed: return "No Completed Tasks"
+    // MARK: - Header
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(Date.now.formatted(date: .complete, time: .omitted))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            Text(greeting)
+                .font(.largeTitle.weight(.bold))
         }
+        .accessibilityElement(children: .combine)
+    }
+
+    // MARK: - Tasks
+
+    private var tasksSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader(
+                title: "Today's Tasks",
+                actionTitle: "See all",
+                action: { selectedTab = .tasks }
+            )
+
+            VStack(spacing: 0) {
+                if todayTasks.isEmpty {
+                    Label(
+                        completedTodayTasks.isEmpty ? "Nothing planned yet" : "All caught up!",
+                        systemImage: completedTodayTasks.isEmpty ? "tray" : "checkmark.seal.fill"
+                    )
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 12)
+                } else {
+                    ForEach(Array(todayTasks.prefix(maxVisibleTasks).enumerated()), id: \.element.id) { index, task in
+                        if index > 0 { Divider() }
+                        taskRow(task)
+                    }
+
+                    if todayTasks.count > maxVisibleTasks {
+                        Divider()
+                        Button("+\(todayTasks.count - maxVisibleTasks) more") {
+                            selectedTab = .tasks
+                        }
+                        .font(.subheadline)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 10)
+                    }
+                }
+
+                if !completedTodayTasks.isEmpty {
+                    Divider()
+                    DisclosureGroup(isExpanded: $showCompleted) {
+                        ForEach(completedTodayTasks) { task in
+                            taskRow(task)
+                        }
+                    } label: {
+                        Text("Completed (\(completedTodayTasks.count))")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 8)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 4)
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+        }
+    }
+
+    private func taskRow(_ task: FocusTask) -> some View {
+        TaskRow(
+            task: task,
+            onToggle: {
+                viewModel.toggleTask(task, context: context)
+            },
+            onEdit: {
+                editingTask = task
+            }
+        )
+        .contextMenu {
+            Button {
+                editingTask = task
+            } label: {
+                Label("Edit", systemImage: "pencil")
+            }
+
+            Button(role: .destructive) {
+                withAnimation(listAnimation) {
+                    viewModel.deleteTask(task, context: context)
+                }
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+        .transition(.opacity)
+    }
+
+    // MARK: - Habits
+
+    private var habitsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader(
+                title: "Today's Habits",
+                actionTitle: "Manage",
+                action: { selectedTab = .habits }
+            )
+
+            VStack(spacing: 0) {
+                if habits.isEmpty {
+                    Button {
+                        selectedTab = .habits
+                    } label: {
+                        Label("No habits yet — add one", systemImage: "plus.circle")
+                            .font(.subheadline)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 12)
+                    }
+                } else {
+                    ForEach(Array(habits.enumerated()), id: \.element.id) { index, habit in
+                        if index > 0 { Divider() }
+                        CompactHabitRow(habit: habit) {
+                            habitViewModel.toggleHabit(habit, context: context)
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 4)
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+        }
+    }
+
+    // MARK: - Focus shortcut
+
+    private var focusShortcut: some View {
+        Button {
+            selectedTab = .focus
+        } label: {
+            Label("Start a focus session", systemImage: "timer")
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.blue.opacity(0.12))
+                .foregroundStyle(.blue)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Helpers
+
+    private func sectionHeader(
+        title: String,
+        actionTitle: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        HStack {
+            Text(title)
+                .font(.title3.weight(.bold))
+                .accessibilityAddTraits(.isHeader)
+
+            Spacer()
+
+            Button(actionTitle, action: action)
+                .font(.subheadline)
+        }
+    }
+
+    private var taskOptionsSheet: some View {
+        NavigationStack {
+            ScrollView {
+                TaskInputView(
+                    newTaskTitle: $newTaskTitle,
+                    priority: $newTaskPriority,
+                    dueDate: $newTaskDueDate,
+                    category: $newTaskCategory
+                ) {
+                    viewModel.addTask(
+                        title: newTaskTitle,
+                        priority: newTaskPriority,
+                        dueDate: newTaskDueDate,
+                        category: newTaskCategory,
+                        context: context
+                    )
+                    resetNewTaskFields()
+                    showTaskOptions = false
+                }
+                .padding()
+            }
+            .navigationTitle("New Task")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        showTaskOptions = false
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private func resetNewTaskFields() {
+        newTaskTitle = ""
+        newTaskPriority = .medium
+        newTaskDueDate = Calendar.current.startOfDay(for: .now)
+        newTaskCategory = .other
     }
 }
 
 #Preview {
-    TodayView()
-        .modelContainer(for: FocusTask.self, inMemory: true)
+    TodayView(selectedTab: .constant(.today))
+        .modelContainer(for: [FocusTask.self, Habit.self], inMemory: true)
 }

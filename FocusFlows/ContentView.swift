@@ -1,7 +1,13 @@
 
 import SwiftUI
 
+enum AppTab: Hashable {
+    case today, tasks, habits, stats, focus, settings
+}
+
 struct ContentView: View {
+
+    @State private var selectedTab: AppTab = .today
 
     @AppStorage("appAppearance") private var appearance = "system"
 
@@ -17,14 +23,15 @@ struct ContentView: View {
     }
 
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
 
             NavigationStack {
-                TodayView()
+                TodayView(selectedTab: $selectedTab)
             }
             .tabItem {
                 Label("Today", systemImage: "sun.max")
             }
+            .tag(AppTab.today)
 
             NavigationStack {
                 TasksView()
@@ -32,6 +39,7 @@ struct ContentView: View {
             .tabItem {
                 Label("Tasks", systemImage: "checklist")
             }
+            .tag(AppTab.tasks)
 
             NavigationStack {
                 HabitsView()
@@ -39,6 +47,7 @@ struct ContentView: View {
             .tabItem {
                 Label("Habits", systemImage: "repeat")
             }
+            .tag(AppTab.habits)
 
             NavigationStack {
                 StatsView()
@@ -46,6 +55,7 @@ struct ContentView: View {
             .tabItem {
                 Label("Stats", systemImage: "chart.bar")
             }
+            .tag(AppTab.stats)
 
             NavigationStack {
                 FocusTimerView()
@@ -53,6 +63,7 @@ struct ContentView: View {
             .tabItem {
                 Label("Focus", systemImage: "timer")
             }
+            .tag(AppTab.focus)
 
             NavigationStack {
                 SettingsView()
@@ -60,6 +71,7 @@ struct ContentView: View {
             .tabItem {
                 Label("Settings", systemImage: "gearshape")
             }
+            .tag(AppTab.settings)
         }
         .preferredColorScheme(preferredColorScheme)
     }

@@ -26,6 +26,7 @@ struct TaskRow: View {
                     .foregroundStyle(task.isCompleted ? .green : .secondary)
                     .font(.title2)
                     .scaleEffect(task.isCompleted ? 1.1 : 1.0)
+                    .symbolEffect(.bounce, value: reduceMotion ? false : task.isCompleted)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(task.isCompleted ? "Mark task incomplete" : "Mark task complete")
@@ -54,9 +55,11 @@ struct TaskRow: View {
                         Text("•")
                             .foregroundStyle(.secondary)
 
-                        Text(dueDate.formatted(date: .abbreviated, time: .omitted))
+                        Text(isOverdue
+                             ? "Overdue · \(dueDate.formatted(date: .abbreviated, time: .omitted))"
+                             : dueDate.formatted(date: .abbreviated, time: .omitted))
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(isOverdue ? .red : .secondary)
                     }
                 }
             }
@@ -72,6 +75,11 @@ struct TaskRow: View {
         .padding(.vertical, 8)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: task.isCompleted)
         .sensoryFeedback(.success, trigger: task.isCompleted)
+    }
+
+    private var isOverdue: Bool {
+        guard !task.isCompleted, let dueDate = task.dueDate else { return false }
+        return dueDate < Calendar.current.startOfDay(for: .now)
     }
 
     private var priorityColor: Color {
