@@ -99,9 +99,18 @@ class TimerViewModel {
     // MARK: - Change Phase
 
     func changePhase(to phase: TimerPhase) {
+        guard currentPhase != phase else { return }
+
+        let wasRunning = isRunning
+
         pause()
+
         currentPhase = phase
         remainingSeconds = configuration.duration(for: phase)
+
+        if wasRunning {
+            start()
+        }
     }
 
     // MARK: - Time Formatting
