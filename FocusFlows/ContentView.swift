@@ -2,7 +2,7 @@
 import SwiftUI
 
 enum AppTab: Hashable {
-    case today, tasks, habits, stats, focus, settings
+    case today, tasks, habits, stats, focus
 }
 
 struct ContentView: View {
@@ -64,14 +64,6 @@ struct ContentView: View {
                 Label("Focus", systemImage: "timer")
             }
             .tag(AppTab.focus)
-
-            NavigationStack {
-                SettingsView()
-            }
-            .tabItem {
-                Label("Settings", systemImage: "gearshape")
-            }
-            .tag(AppTab.settings)
         }
         .preferredColorScheme(preferredColorScheme)
     }

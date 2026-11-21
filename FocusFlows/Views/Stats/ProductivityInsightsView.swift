@@ -143,68 +143,121 @@ struct ProductivityInsightsView: View {
 
     var body: some View {
 
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
 
-            Text("Productivity Insights")
+            Text("This Week")
                 .font(.headline)
+                .accessibilityAddTraits(.isHeader)
 
-            insightRow(
-                icon: "checkmark.circle.fill",
-                title: "Tasks completed this week",
-                value: "\(completedTasksThisWeek)",
-                color: .green
-            )
+            LazyVGrid(
+                columns: [GridItem(.flexible()), GridItem(.flexible())],
+                spacing: 12
+            ) {
+                tile(
+                    value: "\(completedTasksThisWeek)",
+                    title: "Tasks done",
+                    icon: "checkmark.circle.fill",
+                    color: .green
+                )
 
-            insightRow(
-                icon: "chart.pie.fill",
-                title: "Task completion rate",
-                value: "\(taskCompletionRate)%",
-                color: .teal
-            )
+                tile(
+                    value: formatDuration(focusTimeThisWeek),
+                    title: "Focus time",
+                    icon: "clock.fill",
+                    color: .indigo
+                )
 
-            insightRow(
-                icon: "clock.fill",
-                title: "Focus time this week",
-                value: formatDuration(focusTimeThisWeek),
-                color: .indigo
-            )
+                tile(
+                    value: "\(focusSessionsCountThisWeek)",
+                    title: "Focus sessions",
+                    icon: "timer",
+                    color: .pink
+                )
 
-            insightRow(
-                icon: "timer",
-                title: "Focus sessions this week",
-                value: "\(focusSessionsCountThisWeek)",
-                color: .pink
-            )
+                tile(
+                    value: "\(activeDaysThisWeek)/7",
+                    title: "Active days",
+                    icon: "calendar",
+                    color: .blue
+                )
+            }
 
-            insightRow(
-                icon: "calendar",
-                title: "Active days this week",
-                value: "\(activeDaysThisWeek)/7",
-                color: .blue
-            )
+            if !tasks.isEmpty {
+                highlights
+            }
+        }
+    }
 
-            insightRow(
+    // MARK: - Highlights
+
+    private var highlights: some View {
+        VStack(spacing: 10) {
+            highlightRow(
                 icon: "sun.max.fill",
                 title: "Most productive day",
                 value: mostProductiveDay,
                 color: .orange
             )
 
-            insightRow(
-                icon: "flame.fill",
-                title: "Combined habit streaks",
-                value: "\(totalCurrentStreak) days",
-                color: .red
+            Divider()
+
+            highlightRow(
+                icon: "chart.pie.fill",
+                title: "Overall task completion",
+                value: "\(taskCompletionRate)%",
+                color: .teal
             )
+
+            if totalCurrentStreak > 0 {
+                Divider()
+
+                highlightRow(
+                    icon: "flame.fill",
+                    title: "Combined habit streaks",
+                    value: "\(totalCurrentStreak) days",
+                    color: .red
+                )
+            }
         }
         .padding()
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 
-    // MARK: - Reusable Row
+    // MARK: - Reusable Views
 
-    private func insightRow(
+    private func tile(
+        value: String,
+        title: String,
+        icon: String,
+        color: Color
+    ) -> some View {
+
+        VStack(alignment: .leading, spacing: 8) {
+
+            Image(systemName: icon)
+                .font(.headline)
+                .foregroundStyle(color)
+
+            Text(value)
+                .font(.title2.weight(.bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .contentTransition(.numericText())
+
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(title) this week: \(value)")
+    }
+
+    private func highlightRow(
         icon: String,
         title: String,
         value: String,
@@ -215,7 +268,7 @@ struct ProductivityInsightsView: View {
 
             Image(systemName: icon)
                 .foregroundStyle(color)
-                .font(.title3)
+                .frame(width: 24)
 
             Text(title)
                 .font(.subheadline)
@@ -223,9 +276,9 @@ struct ProductivityInsightsView: View {
             Spacer()
 
             Text(value)
-                .font(.subheadline)
-                .fontWeight(.bold)
+                .font(.subheadline.weight(.semibold))
         }
+        .accessibilityElement(children: .combine)
     }
 }
 

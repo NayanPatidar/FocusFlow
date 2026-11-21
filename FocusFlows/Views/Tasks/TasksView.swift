@@ -4,44 +4,289 @@ import SwiftData
 struct TasksView: View {
 
     @Environment(\.modelContext) private var context
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     @Query private var tasks: [FocusTask]
 
     @State private var searchText = ""
     @State private var selectedFilter: TaskFilter = .all
     @State private var selectedSort: TaskSort = .none
+
+    @State private var showNewTask = false
+    @State private var editingTask: FocusTask?
+    @State private var showCompleted = false
+
     @State private var deletedTask: FocusTask?
-    @State private var showSnackbar = false
+    @State private var snackbarID: UUID?
 
     private let viewModel = TaskViewModel()
 
-    private var searchedTasks: [FocusTask] {
+    // MARK: - Derived data
+
+    private var visibleTasks: [FocusTask] {
         let filtered = viewModel.filteredTasks(
             tasks,
             filter: selectedFilter,
             sort: selectedSort
         )
 
-        if searchText.isEmpty {
-            return filtered
-        }
+        guard !searchText.isEmpty else { return filtered }
 
         return filtered.filter {
             $0.title.localizedCaseInsensitiveContains(searchText)
         }
     }
 
+    private var groups: [TaskGroup] {
+        let calendar = Calendar.current
+        let startOfToday = calendar.startOfDay(for: .now)
+        let startOfTomorrow = calendar.date(byAdding: .day, value: 1, to: startOfToday) ?? .now
+
+        var overdue: [FocusTask] = []
+        var today: [FocusTask] = []
+        var upcoming: [FocusTask] = []
+        var noDate: [FocusTask] = []
+        var completed: [FocusTask] = []
+
+        for task in visibleTasks {
+            if task.isCompleted {
+                completed.append(task)
+            } else if let due = task.dueDate {
+                if due < startOfToday {
+                    overdue.append(task)
+                } else if due < startOfTomorrow {
+                    today.append(task)
+                } else {
+                    upcoming.append(task)
+                }
+            } else {
+                noDate.append(task)
+            }
+        }
+
+        upcoming.sort { ($0.dueDate ?? .distantFuture) < ($1.dueDate ?? .distantFuture) }
+        completed.sort { ($0.completedAt ?? .distantPast) > ($1.completedAt ?? .distantPast) }
+
+        return [
+            TaskGroup(kind: .overdue, tasks: overdue),
+            TaskGroup(kind: .today, tasks: today),
+            TaskGroup(kind: .upcoming, tasks: upcoming),
+            TaskGroup(kind: .noDate, tasks: noDate),
+            TaskGroup(kind: .completed, tasks: completed)
+        ]
+        .filter { !$0.tasks.isEmpty }
+    }
+
+    private var isFilterActive: Bool {
+        selectedFilter != .all || selectedSort != .none
+    }
+
+    private var listAnimation: Animation? {
+        reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.8)
+    }
+
+    // MARK: - Body
+
+    var body: some View {
+        List {
+            if selectedSort == .none {
+                ForEach(groups) { group in
+                    if group.kind == .completed {
+                        Section(isExpanded: $showCompleted) {
+                            rows(group.tasks)
+                        } header: {
+                            sectionHeader(group)
+                        }
+                    } else {
+                        Section {
+                            rows(group.tasks)
+                        } header: {
+                            sectionHeader(group)
+                        }
+                    }
+                }
+            } else {
+                rows(visibleTasks)
+            }
+        }
+        .listStyle(.sidebar)
+        .overlay {
+            if visibleTasks.isEmpty {
+                emptyState
+            }
+        }
+        .animation(listAnimation, value: visibleTasks.count)
+        .navigationTitle("Tasks")
+        .searchable(text: $searchText, prompt: "Search tasks")
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                filterMenu
+            }
+
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showNewTask = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel("New task")
+            }
+        }
+        .sheet(isPresented: $showNewTask) {
+            NewTaskSheet { title, priority, dueDate, category in
+                withAnimation(listAnimation) {
+                    viewModel.addTask(
+                        title: title,
+                        priority: priority,
+                        dueDate: dueDate,
+                        category: category,
+                        context: context
+                    )
+                }
+            }
+        }
+        .sheet(item: $editingTask) { task in
+            EditTaskView(task: task) { updatedTitle, updatedPriority, updatedDueDate, updatedCategory in
+                viewModel.updateTask(
+                    task,
+                    title: updatedTitle,
+                    priority: updatedPriority,
+                    dueDate: updatedDueDate,
+                    category: updatedCategory,
+                    context: context
+                )
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if snackbarID != nil, let deletedTask {
+                SnackbarView(
+                    message: "Task deleted",
+                    actionTitle: "UNDO"
+                ) {
+                    withAnimation(listAnimation) {
+                        viewModel.restoreTask(deletedTask, context: context)
+                    }
+                    dismissSnackbar()
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 12)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(listAnimation, value: snackbarID)
+        .task(id: snackbarID) {
+            // A new ID on every delete restarts the 4-second timer.
+            guard snackbarID != nil else { return }
+
+            do {
+                try await Task.sleep(for: .seconds(4))
+            } catch {
+                return
+            }
+
+            dismissSnackbar()
+        }
+    }
+
+    // MARK: - Rows
+
+    private func rows(_ tasks: [FocusTask]) -> some View {
+        ForEach(tasks) { task in
+            TaskRow(
+                task: task,
+                onToggle: {
+                    viewModel.toggleTask(task, context: context)
+                },
+                onEdit: {
+                    editingTask = task
+                }
+            )
+            .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                Button(role: .destructive) {
+                    delete(task)
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+
+                Button {
+                    editingTask = task
+                } label: {
+                    Label("Edit", systemImage: "pencil")
+                }
+                .tint(.blue)
+            }
+            .contextMenu {
+                Button {
+                    editingTask = task
+                } label: {
+                    Label("Edit", systemImage: "pencil")
+                }
+
+                Button(role: .destructive) {
+                    delete(task)
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+        }
+    }
+
+    private func sectionHeader(_ group: TaskGroup) -> some View {
+        HStack {
+            Text(group.kind.title)
+            Text("\(group.tasks.count)")
+                .foregroundStyle(.secondary)
+        }
+        .foregroundStyle(group.kind == .overdue ? .red : .primary)
+    }
+
+    // MARK: - Filter menu
+
+    private var filterMenu: some View {
+        Menu {
+            Picker("Show", selection: $selectedFilter) {
+                ForEach(TaskFilter.allCases) { filter in
+                    Text(filter.rawValue).tag(filter)
+                }
+            }
+
+            Picker("Sort by", selection: $selectedSort) {
+                ForEach(TaskSort.allCases) { sort in
+                    Text(sort.rawValue).tag(sort)
+                }
+            }
+
+            if isFilterActive {
+                Divider()
+                Button("Reset") {
+                    selectedFilter = .all
+                    selectedSort = .none
+                }
+            }
+        } label: {
+            Image(systemName: isFilterActive
+                  ? "line.3.horizontal.decrease.circle.fill"
+                  : "line.3.horizontal.decrease.circle")
+        }
+        .accessibilityLabel("Filter and sort")
+    }
+
+    // MARK: - Empty state
+
+    @ViewBuilder
     private var emptyState: some View {
         if tasks.isEmpty {
             EmptyStateView(
                 systemImage: "checklist",
                 title: "No Tasks Yet",
-                message: "Start organizing your day by adding your first task."
+                message: "Tap + to add your first task."
             )
         } else if !searchText.isEmpty {
             EmptyStateView(
                 systemImage: "magnifyingglass",
                 title: "No Results Found",
-                message: "Try changing your search to find the task you're looking for."
+                message: "Try a different search."
             )
         } else {
             EmptyStateView(
@@ -52,111 +297,44 @@ struct TasksView: View {
         }
     }
 
-    var body: some View {
-        VStack(spacing: 16) {
+    // MARK: - Delete / Undo
 
-            TextField("Search tasks...", text: $searchText)
-                .textFieldStyle(.roundedBorder)
-                .padding(.horizontal)
+    private func delete(_ task: FocusTask) {
+        deletedTask = task
 
-            Picker("Filter", selection: $selectedFilter) {
-                ForEach(TaskFilter.allCases) { filter in
-                    Text(filter.rawValue).tag(filter)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal)
-
-            Picker("Sort", selection: $selectedSort) {
-                ForEach(TaskSort.allCases) { sort in
-                    Text(sort.rawValue).tag(sort)
-                }
-            }
-            .pickerStyle(.menu)
-            .padding(.horizontal)
-
-            List {
-                if searchedTasks.isEmpty {
-                    emptyState
-                } else {
-                    ForEach(searchedTasks) { task in
-                        TaskRow(
-                            task: task,
-                            onToggle: {
-                                viewModel.toggleTask(task, context: context)
-                            },
-                            onEdit: {
-                                // Edit action handled by TaskRow
-                            }
-                        )
-                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
-                                deletedTask = task
-
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                    viewModel.deleteTask(task, context: context)
-                                }
-
-                                showSnackbar = true
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
-                    }
-                    .onDelete { offsets in
-                        let tasksToDelete = offsets.map {
-                            searchedTasks[$0]
-                        }
-
-                        guard let task = tasksToDelete.first, tasksToDelete.count == 1 else {
-                            viewModel.deleteTasks(tasksToDelete, context: context)
-                            return
-                        }
-
-                        deletedTask = task
-
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                            viewModel.deleteTask(task, context: context)
-                        }
-
-                        showSnackbar = true
-                    }
-                }
-            }
-            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: searchedTasks.count)
+        withAnimation(listAnimation) {
+            viewModel.deleteTask(task, context: context)
         }
-        .navigationTitle("Tasks")
-        .overlay(alignment: .bottom) {
-            if showSnackbar, let deletedTask {
-                SnackbarView(
-                    message: "Task deleted",
-                    actionTitle: "UNDO"
-                ) {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                        viewModel.restoreTask(deletedTask, context: context)
-                    }
 
-                    showSnackbar = false
-                    self.deletedTask = nil
-                }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 12)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+        snackbarID = UUID()
+    }
+
+    private func dismissSnackbar() {
+        snackbarID = nil
+        deletedTask = nil
+    }
+}
+
+// MARK: - Grouping
+
+private struct TaskGroup: Identifiable {
+
+    enum Kind {
+        case overdue, today, upcoming, noDate, completed
+
+        var title: String {
+            switch self {
+            case .overdue: return "Overdue"
+            case .today: return "Today"
+            case .upcoming: return "Upcoming"
+            case .noDate: return "No Date"
+            case .completed: return "Completed"
             }
-        }
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: showSnackbar)
-        .task(id: showSnackbar) {
-            guard showSnackbar else { return }
-
-            do {
-                try await Task.sleep(for: .seconds(4))
-            } catch {
-                return
-            }
-
-            showSnackbar = false
-            deletedTask = nil
         }
     }
+
+    let kind: Kind
+    let tasks: [FocusTask]
+
+    var id: Kind { kind }
 }

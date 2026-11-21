@@ -17,12 +17,7 @@ struct TodayView: View {
     @State private var editingTask: FocusTask?
     @State private var showTaskOptions = false
     @State private var showCompleted = false
-
-    // Full-options sheet state
-    @State private var newTaskTitle = ""
-    @State private var newTaskPriority: TaskPriority = .medium
-    @State private var newTaskDueDate: Date? = Calendar.current.startOfDay(for: .now)
-    @State private var newTaskCategory: TaskCategory = .other
+    @State private var showSettings = false
 
     private let maxVisibleTasks = 5
 
@@ -126,6 +121,18 @@ struct TodayView: View {
         .animation(listAnimation, value: todayTasks.count)
         .animation(listAnimation, value: completedTodayTasks.count)
         .toolbar(.hidden, for: .navigationBar)
+        .sheet(isPresented: $showSettings) {
+            NavigationStack {
+                SettingsView()
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") {
+                                showSettings = false
+                            }
+                        }
+                    }
+            }
+        }
         .sheet(item: $editingTask) { task in
             EditTaskView(task: task) { updatedTitle, updatedPriority, updatedDueDate, updatedCategory in
                 viewModel.updateTask(
@@ -139,7 +146,17 @@ struct TodayView: View {
             }
         }
         .sheet(isPresented: $showTaskOptions) {
-            taskOptionsSheet
+            NewTaskSheet(defaultDueDate: startOfToday) { title, priority, dueDate, category in
+                withAnimation(listAnimation) {
+                    viewModel.addTask(
+                        title: title,
+                        priority: priority,
+                        dueDate: dueDate,
+                        category: category,
+                        context: context
+                    )
+                }
+            }
         }
         .onAppear {
             habitViewModel.refreshDailyStatus(habits, context: context)
@@ -149,15 +166,29 @@ struct TodayView: View {
     // MARK: - Header
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(Date.now.formatted(date: .complete, time: .omitted))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(Date.now.formatted(date: .complete, time: .omitted))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
 
-            Text(greeting)
-                .font(.largeTitle.weight(.bold))
+                Text(greeting)
+                    .font(.largeTitle.weight(.bold))
+            }
+            .accessibilityElement(children: .combine)
+
+            Spacer()
+
+            Button {
+                showSettings = true
+            } label: {
+                Image(systemName: "gearshape")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 44, height: 44)
+            }
+            .accessibilityLabel("Settings")
         }
-        .accessibilityElement(children: .combine)
     }
 
     // MARK: - Tasks
@@ -316,47 +347,6 @@ struct TodayView: View {
             Button(actionTitle, action: action)
                 .font(.subheadline)
         }
-    }
-
-    private var taskOptionsSheet: some View {
-        NavigationStack {
-            ScrollView {
-                TaskInputView(
-                    newTaskTitle: $newTaskTitle,
-                    priority: $newTaskPriority,
-                    dueDate: $newTaskDueDate,
-                    category: $newTaskCategory
-                ) {
-                    viewModel.addTask(
-                        title: newTaskTitle,
-                        priority: newTaskPriority,
-                        dueDate: newTaskDueDate,
-                        category: newTaskCategory,
-                        context: context
-                    )
-                    resetNewTaskFields()
-                    showTaskOptions = false
-                }
-                .padding()
-            }
-            .navigationTitle("New Task")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        showTaskOptions = false
-                    }
-                }
-            }
-        }
-        .presentationDetents([.medium, .large])
-    }
-
-    private func resetNewTaskFields() {
-        newTaskTitle = ""
-        newTaskPriority = .medium
-        newTaskDueDate = Calendar.current.startOfDay(for: .now)
-        newTaskCategory = .other
     }
 }
 

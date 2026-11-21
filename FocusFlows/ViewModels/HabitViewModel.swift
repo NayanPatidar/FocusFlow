@@ -46,6 +46,17 @@ class HabitViewModel {
         save(context)
     }
 
+    // MARK: - Restore Habit
+
+    func restoreHabit(_ habit: Habit, context: ModelContext) {
+        context.insert(habit)
+        save(context)
+
+        if habit.reminderTime != nil {
+            HabitReminderManager.shared.scheduleReminder(for: habit)
+        }
+    }
+
     // MARK: - Toggle Habit
 
     func toggleHabit(_ habit: Habit, context: ModelContext) {

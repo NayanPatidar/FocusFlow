@@ -77,26 +77,6 @@ struct HabitRow: View {
                 }
 
                 Spacer()
-
-                Button {
-                    onEdit()
-                } label: {
-                    Image(systemName: "pencil")
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Edit habit: \(habit.name)")
-                .accessibilityHint("Double tap to edit this habit")
-
-                Button(role: .destructive) {
-                    onDelete()
-                } label: {
-                    Image(systemName: "trash")
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Delete habit: \(habit.name)")
-                .accessibilityHint("Double tap to delete this habit")
             }
 
             Divider()
@@ -119,5 +99,16 @@ struct HabitRow: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: habit.isCompletedToday)
         .sensoryFeedback(.success, trigger: habit.isCompletedToday)
+        .contextMenu {
+            Button(action: onEdit) {
+                Label("Edit", systemImage: "pencil")
+            }
+
+            Button(role: .destructive, action: onDelete) {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+        .accessibilityAction(named: "Edit habit: \(habit.name)", onEdit)
+        .accessibilityAction(named: "Delete habit: \(habit.name)", onDelete)
     }
 }

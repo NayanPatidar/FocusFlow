@@ -1,4 +1,3 @@
-
 import SwiftUI
 import SwiftData
 
@@ -9,189 +8,116 @@ struct StatsView: View {
     @Query(sort: \FocusSession.completedAt, order: .reverse)
     private var focusSessions: [FocusSession]
 
-    private var completedTasks: Int {
-        tasks.filter { $0.isCompleted }.count
-    }
+    @State private var selectedTrend: Trend = .focus
 
-    private var completedHabitsToday: Int {
-        habits.filter { $0.isCompletedToday }.count
-    }
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var sessionsToday: [FocusSession] {
-        focusSessions.filter {
-            Calendar.current.isDateInToday($0.completedAt)
-        }
-    }
+    private enum Trend: String, CaseIterable, Identifiable {
+        case focus = "Focus"
+        case tasks = "Tasks"
+        case habits = "Habits"
 
-    private var focusTimeToday: TimeInterval {
-        sessionsToday.reduce(0) { $0 + $1.duration }
-    }
-
-    private var totalFocusTime: TimeInterval {
-        focusSessions.reduce(0) { $0 + $1.duration }
-    }
-
-    private func formatDuration(_ duration: TimeInterval) -> String {
-        let totalMinutes = Int(duration) / 60
-        let hours = totalMinutes / 60
-        let minutes = totalMinutes % 60
-
-        if hours > 0 {
-            return "\(hours)h \(minutes)m"
-        }
-
-        return "\(minutes)m"
+        var id: String { rawValue }
     }
 
     var body: some View {
-
         ScrollView {
+            VStack(spacing: 24) {
 
-            VStack(spacing: 20) {
+                // 1. This week at a glance
+                ProductivityInsightsView(
+                    tasks: tasks,
+                    habits: habits,
+                    focusSessions: focusSessions
+                )
 
-                header
-                
+                // 2. One trend chart, switchable
+                trendsSection
+
+                // 3. Day-by-day calendar
                 ActivityCalendarView(
                     tasks: tasks,
                     habits: habits,
                     focusSessions: focusSessions
                 )
 
-                LazyVGrid(
-                    columns: [
-                        GridItem(.flexible()),
-                        GridItem(.flexible())
-                    ],
-                    spacing: 16
-                ) {
-
-                    statCard(
-                        title: "Tasks Completed",
-                        value: "\(completedTasks)",
-                        icon: "checkmark.circle.fill",
-                        color: .green
-                    )
-
-                    statCard(
-                        title: "Total Tasks",
-                        value: "\(tasks.count)",
-                        icon: "list.bullet",
-                        color: .blue
-                    )
-
-                    statCard(
-                        title: "Total Habits",
-                        value: "\(habits.count)",
-                        icon: "repeat",
-                        color: .orange
-                    )
-
-                    statCard(
-                        title: "Habits Completed",
-                        value: "\(completedHabitsToday)/\(habits.count)",
-                        icon: "flame.fill",
-                        color: .purple
-                    )
-
-                    statCard(
-                        title: "Focus Time Today",
-                        value: formatDuration(focusTimeToday),
-                        icon: "clock.fill",
-                        color: .indigo
-                    )
-
-                    statCard(
-                        title: "Sessions Today",
-                        value: "\(sessionsToday.count)",
-                        icon: "timer",
-                        color: .pink
-                    )
-
-                    statCard(
-                        title: "Total Focus Sessions",
-                        value: "\(focusSessions.count)",
-                        icon: "target",
-                        color: .teal
-                    )
-
-                    statCard(
-                        title: "Total Focus Time",
-                        value: formatDuration(totalFocusTime),
-                        icon: "hourglass",
-                        color: .mint
-                    )
-                }
-                
-                if focusSessions.isEmpty {
-                    EmptyStateView(
-                        systemImage: "timer",
-                        title: "No Focus Sessions Yet",
-                        message: "Complete your first focus session to see your focus history and analytics."
-                    )
-                } else {
-                    WeeklyFocusChart(sessions: focusSessions)
-                    FocusSessionHistoryView(sessions: focusSessions)
+                // 4. Habit streaks (only when there are habits)
+                if !habits.isEmpty {
+                    HabitStreakSection(habits: habits)
                 }
 
-                WeeklyTaskChart(tasks: tasks)
-
-                WeeklyHabitChart(habits: habits)
-
-                HabitStreakSection(habits: habits)
-
-                ProductivityInsightsView(
-                    tasks: tasks,
-                    habits: habits,
-                    focusSessions: focusSessions
-                )
+                // 5. Full focus history lives on its own screen
+                focusHistoryLink
             }
             .padding()
         }
         .navigationTitle("Stats")
-        .navigationBarTitleDisplayMode(.inline)
     }
 
-    private var header: some View {
+    // MARK: - Trends
 
-        VStack(alignment: .leading, spacing: 8) {
+    private var trendsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Picker("Trend", selection: $selectedTrend.animation(reduceMotion ? nil : .easeInOut(duration: 0.25))) {
+                ForEach(Trend.allCases) { trend in
+                    Text(trend.rawValue).tag(trend)
+                }
+            }
+            .pickerStyle(.segmented)
 
-            Text("Your Progress")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-
-            Text("A snapshot of your productivity.")
-                .foregroundStyle(.secondary)
+            Group {
+                switch selectedTrend {
+                case .focus:
+                    WeeklyFocusChart(sessions: focusSessions)
+                case .tasks:
+                    WeeklyTaskChart(tasks: tasks)
+                case .habits:
+                    WeeklyHabitChart(habits: habits)
+                }
+            }
+            .transition(.opacity)
+            .id(selectedTrend)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func statCard(
-        title: String,
-        value: String,
-        icon: String,
-        color: Color
-    ) -> some View {
+    // MARK: - Focus history
 
-        VStack(alignment: .leading, spacing: 14) {
+    private var focusHistoryLink: some View {
+        NavigationLink {
+            ScrollView {
+                FocusSessionHistoryView(sessions: focusSessions)
+                    .padding()
+            }
+            .navigationTitle("Focus History")
+            .navigationBarTitleDisplayMode(.inline)
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.title3)
+                    .foregroundStyle(.indigo)
 
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundStyle(color)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Focus History")
+                        .font(.subheadline.weight(.semibold))
 
-            Text(value)
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .minimumScaleFactor(0.7)
-                .lineLimit(1)
+                    Text(focusSessions.isEmpty
+                         ? "No sessions yet"
+                         : "\(focusSessions.count) sessions")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
 
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding()
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .buttonStyle(.plain)
     }
 }
 

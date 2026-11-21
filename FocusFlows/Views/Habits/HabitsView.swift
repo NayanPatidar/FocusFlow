@@ -4,24 +4,17 @@ import SwiftData
 struct HabitsView: View {
 
     @Environment(\.modelContext) private var context
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @Query(sort: \Habit.createdAt, order: .reverse)
     private var habits: [Habit]
 
     @State private var habitViewModel = HabitViewModel()
-    @State private var newHabitName = ""
     @State private var editingHabit: Habit?
+    @State private var showNewHabit = false
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    @State private var newHabitReminderEnabled = false
-
-    @State private var newHabitReminderTime = Calendar.current.date(
-        bySettingHour: 9,
-        minute: 0,
-        second: 0,
-        of: .now
-    ) ?? .now
+    @State private var deletedHabit: Habit?
+    @State private var snackbarID: UUID?
 
     private var completedCount: Int {
         habits.filter { $0.isCompletedToday }.count
@@ -32,117 +25,87 @@ struct HabitsView: View {
         return Double(completedCount) / Double(habits.count)
     }
 
+    private var listAnimation: Animation? {
+        reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.8)
+    }
+
+    // MARK: - Body
+
     var body: some View {
-        VStack(spacing: 20) {
+        List {
+            if !habits.isEmpty {
+                progressHeader
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+            }
 
-            progressCard
-
-            // MARK: - Add Habit
-
-            VStack(alignment: .leading, spacing: 12) {
-
-                HStack(spacing: 12) {
-
-                    TextField("Enter a habit", text: $newHabitName)
-                        .textFieldStyle(.roundedBorder)
+            ForEach(habits) { habit in
+                HabitRow(
+                    habit: habit,
+                    onToggle: {
+                        habitViewModel.toggleHabit(habit, context: context)
+                    },
+                    onEdit: {
+                        editingHabit = habit
+                    },
+                    onDelete: {
+                        delete(habit)
+                    }
+                )
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    Button(role: .destructive) {
+                        delete(habit)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
 
                     Button {
-                        addHabit()
+                        editingHabit = habit
                     } label: {
-                        Image(systemName: "plus")
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                            .frame(width: 44, height: 44)
-                            .background(.blue)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        Label("Edit", systemImage: "pencil")
                     }
-                }
-
-                Toggle("Daily Reminder", isOn: $newHabitReminderEnabled)
-
-                if newHabitReminderEnabled {
-                    DatePicker(
-                        "Reminder Time",
-                        selection: $newHabitReminderTime,
-                        displayedComponents: .hourAndMinute
-                    )
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                    .tint(.blue)
                 }
             }
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: newHabitReminderEnabled)
-            .padding()
-            .background(Color(.secondarySystemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-
-            // MARK: - Habit List
-
+        }
+        .listStyle(.plain)
+        .overlay {
             if habits.isEmpty {
                 EmptyStateView(
                     systemImage: "repeat",
                     title: "No Habits Yet",
-                    message: "Build consistency by adding your first daily habit."
-                )
-            } else {
-                List {
-                    ForEach(habits) { habit in
-                        HabitRow(
-                            habit: habit,
-                            onToggle: {
-                                habitViewModel.toggleHabit(
-                                    habit,
-                                    context: context
-                                )
-                            },
-                            onEdit: {
-                                editingHabit = habit
-                            },
-                            onDelete: {
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                    habitViewModel.deleteHabit(
-                                        habit,
-                                        context: context
-                                    )
-                                }
-                            }
-                        )
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
-                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button {
-                                editingHabit = habit
-                            } label: {
-                                Label("Edit", systemImage: "pencil")
-                            }
-                            .tint(.blue)
-
-                            Button(role: .destructive) {
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                    habitViewModel.deleteHabit(
-                                        habit,
-                                        context: context
-                                    )
-                                }
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
-                    }
-                }
-                .listStyle(.plain)
-                .animation(
-                    .spring(response: 0.35, dampingFraction: 0.8),
-                    value: habits.count
+                    message: "Tap + to start building a daily habit."
                 )
             }
-
-            Spacer(minLength: 0)
         }
-        .padding()
+        .animation(listAnimation, value: habits.count)
         .navigationTitle("Habits")
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showNewHabit = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel("New habit")
+            }
+        }
         .onAppear {
             habitViewModel.refreshDailyStatus(habits, context: context)
+        }
+        .sheet(isPresented: $showNewHabit) {
+            NewHabitSheet { name, reminderTime in
+                withAnimation(listAnimation) {
+                    habitViewModel.addHabit(
+                        name: name,
+                        reminderTime: reminderTime,
+                        context: context
+                    )
+                }
+            }
         }
         .sheet(item: $editingHabit) { habit in
             EditHabitView(habit: habit) { updatedName, updatedReminderTime in
@@ -172,52 +135,74 @@ struct HabitsView: View {
                 }
             }
         }
+        .overlay(alignment: .bottom) {
+            if snackbarID != nil, let deletedHabit {
+                SnackbarView(
+                    message: "Habit deleted",
+                    actionTitle: "UNDO"
+                ) {
+                    withAnimation(listAnimation) {
+                        habitViewModel.restoreHabit(deletedHabit, context: context)
+                    }
+                    dismissSnackbar()
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 12)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(listAnimation, value: snackbarID)
+        .task(id: snackbarID) {
+            guard snackbarID != nil else { return }
+
+            do {
+                try await Task.sleep(for: .seconds(4))
+            } catch {
+                return
+            }
+
+            dismissSnackbar()
+        }
     }
 
-    // MARK: - Progress Card
+    // MARK: - Progress header
 
-    private var progressCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-
+    private var progressHeader: some View {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Today's Progress")
-                        .font(.headline)
-
-                    Text("Keep your momentum going!")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                Text(completedCount == habits.count ? "All habits done today 🎉" : "Today")
+                    .font(.subheadline.weight(.semibold))
 
                 Spacer()
 
-                Text("\(completedCount)/\(habits.count)")
-                    .font(.title2)
-                    .fontWeight(.bold)
+                Text("\(completedCount) of \(habits.count)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .contentTransition(.numericText())
             }
 
             ProgressView(value: progress)
                 .tint(.green)
-
-            Text("\(Int(progress * 100))% completed")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .animation(listAnimation, value: progress)
         }
-        .padding()
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(completedCount) of \(habits.count) habits done today")
     }
 
-    // MARK: - Add Habit
+    // MARK: - Delete / Undo
 
-    private func addHabit() {
-        habitViewModel.addHabit(
-            name: newHabitName,
-            reminderTime: newHabitReminderEnabled ? newHabitReminderTime : nil,
-            context: context
-        )
+    private func delete(_ habit: Habit) {
+        deletedHabit = habit
 
-        newHabitName = ""
-        newHabitReminderEnabled = false
+        withAnimation(listAnimation) {
+            habitViewModel.deleteHabit(habit, context: context)
+        }
+
+        snackbarID = UUID()
+    }
+
+    private func dismissSnackbar() {
+        snackbarID = nil
+        deletedHabit = nil
     }
 }

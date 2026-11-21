@@ -1,5 +1,6 @@
 
 import SwiftUI
+import UIKit
 import UserNotifications
 
 struct SettingsView: View {
@@ -22,8 +23,17 @@ struct SettingsView: View {
                 .pickerStyle(.segmented)
             }
 
+            // Focus Timer
+            Section("Focus Timer") {
+                NavigationLink {
+                    TimerSettingsView()
+                } label: {
+                    Label("Durations & Breaks", systemImage: "timer")
+                }
+            }
+
             // Notifications
-            Section("Notifications") {
+            Section {
                 HStack {
                     Text("Permission Status")
                     Spacer()
@@ -31,9 +41,21 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                Button("Request Notification Permission") {
-                    requestNotificationPermission()
+                if notificationStatus == "Denied" {
+                    Button("Open iOS Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                } else if notificationStatus != "Enabled" {
+                    Button("Allow Notifications") {
+                        requestNotificationPermission()
+                    }
                 }
+            } header: {
+                Text("Notifications")
+            } footer: {
+                Text("Used for task, habit and focus timer reminders.")
             }
 
             // About
@@ -48,7 +70,7 @@ struct SettingsView: View {
                 HStack {
                     Text("Version")
                     Spacer()
-                    Text("1.0")
+                    Text(appVersion)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -63,6 +85,10 @@ struct SettingsView: View {
         } message: {
             Text("Notification permission request completed. If permission was denied previously, enable it from iOS Settings.")
         }
+    }
+
+    private var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
     }
 
     private func checkNotificationStatus() {
