@@ -88,6 +88,18 @@ struct TasksView: View {
                             }
                         )
                         .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                    viewModel.deleteTasks(
+                                        [task],
+                                        context: context
+                                    )
+                                }
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                     }
                     .onDelete { offsets in
                         let tasksToDelete = offsets.map {
