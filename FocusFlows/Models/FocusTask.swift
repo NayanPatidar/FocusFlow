@@ -16,6 +16,7 @@ class FocusTask {
     var isCompleted: Bool
     var priorityRaw: String
     var dueDate: Date?
+    var categoryRaw: String
 
     var priority: TaskPriority {
         get {
@@ -26,17 +27,28 @@ class FocusTask {
         }
     }
 
+    var category: TaskCategory {
+        get {
+            TaskCategory(rawValue: categoryRaw) ?? .other
+        }
+        set {
+            categoryRaw = newValue.rawValue
+        }
+    }
+
     init(
         id: UUID = UUID(),
         title: String,
         isCompleted: Bool = false,
         priority: TaskPriority = .medium,
-        dueDate: Date? = nil
+        dueDate: Date? = nil,
+        category: TaskCategory = .other
     ) {
         self.id = id
         self.title = title
         self.isCompleted = isCompleted
         self.priorityRaw = priority.rawValue
         self.dueDate = dueDate
+        self.categoryRaw = category.rawValue
     }
 }

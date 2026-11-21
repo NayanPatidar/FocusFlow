@@ -10,6 +10,7 @@ struct TodayView: View {
     @State private var newTaskTitle = ""
     @State private var newTaskPriority: TaskPriority = .medium
     @State private var newTaskDueDate: Date?
+    @State private var newTaskCategory: TaskCategory = .other
 
     @State private var editingTask: FocusTask?
     @State private var selectedFilter: TaskFilter = .all
@@ -63,13 +64,11 @@ struct TodayView: View {
                                 .font(.title3)
                                 .fontWeight(.semibold)
 
-                            Text(
-                                tasks.isEmpty
-                                    ? "Start by adding your tasks"
-                                    : "Keep up the good work!"
-                            )
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            Text(tasks.isEmpty
+                                 ? "Start by adding your tasks"
+                                 : "Keep up the good work!")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
                         }
 
                         Spacer()
@@ -95,18 +94,21 @@ struct TodayView: View {
                     TaskInputView(
                         newTaskTitle: $newTaskTitle,
                         priority: $newTaskPriority,
-                        dueDate: $newTaskDueDate
+                        dueDate: $newTaskDueDate,
+                        category: $newTaskCategory
                     ) {
                         viewModel.addTask(
                             title: newTaskTitle,
                             priority: newTaskPriority,
                             dueDate: newTaskDueDate,
+                            category: newTaskCategory,
                             context: context
                         )
 
                         newTaskTitle = ""
                         newTaskPriority = .medium
                         newTaskDueDate = nil
+                        newTaskCategory = .other
                     }
 
                     // Filter
@@ -127,7 +129,7 @@ struct TodayView: View {
                     }
                     .pickerStyle(.menu)
 
-                    // Task List
+                    // Task list
                     if displayedTasks.isEmpty {
                         ContentUnavailableView(
                             emptyTitle,
@@ -162,12 +164,13 @@ struct TodayView: View {
             .padding()
         }
         .sheet(item: $editingTask) { task in
-            EditTaskView(task: task) { updatedTitle, updatedPriority, updatedDueDate in
+            EditTaskView(task: task) { updatedTitle, updatedPriority, updatedDueDate, updatedCategory in
                 viewModel.updateTask(
                     task,
                     title: updatedTitle,
                     priority: updatedPriority,
                     dueDate: updatedDueDate,
+                    category: updatedCategory,
                     context: context
                 )
             }
@@ -178,12 +181,9 @@ struct TodayView: View {
 
     private var emptyTitle: String {
         switch selectedFilter {
-        case .all:
-            return "No Tasks Yet"
-        case .active:
-            return "No Active Tasks"
-        case .completed:
-            return "No Completed Tasks"
+        case .all: return "No Tasks Yet"
+        case .active: return "No Active Tasks"
+        case .completed: return "No Completed Tasks"
         }
     }
 }

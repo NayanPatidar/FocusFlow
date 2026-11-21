@@ -1,9 +1,11 @@
+
 import SwiftUI
 
 struct TaskInputView: View {
     @Binding var newTaskTitle: String
     @Binding var priority: TaskPriority
     @Binding var dueDate: Date?
+    @Binding var category: TaskCategory
 
     let onAddTask: () -> Void
 
@@ -15,10 +17,16 @@ struct TaskInputView: View {
             TextField("Enter a task", text: $newTaskTitle)
                 .textFieldStyle(.roundedBorder)
 
+            Picker("Category", selection: $category) {
+                ForEach(TaskCategory.allCases) { category in
+                    Text(category.rawValue).tag(category)
+                }
+            }
+            .pickerStyle(.menu)
+
             Picker("Priority", selection: $priority) {
                 ForEach(TaskPriority.allCases) { priority in
-                    Text(priority.rawValue)
-                        .tag(priority)
+                    Text(priority.rawValue).tag(priority)
                 }
             }
             .pickerStyle(.segmented)

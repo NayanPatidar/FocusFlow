@@ -6,18 +6,21 @@ struct EditTaskView: View {
     @State private var title: String
     @State private var priority: TaskPriority
     @State private var dueDate: Date?
+    @State private var category: TaskCategory
+
     @State private var showDatePicker = false
     @State private var selectedDate = Date()
 
-    let onSave: (String, TaskPriority, Date?) -> Void
+    let onSave: (String, TaskPriority, Date?, TaskCategory) -> Void
 
     init(
         task: FocusTask,
-        onSave: @escaping (String, TaskPriority, Date?) -> Void
+        onSave: @escaping (String, TaskPriority, Date?, TaskCategory) -> Void
     ) {
         _title = State(initialValue: task.title)
         _priority = State(initialValue: task.priority)
         _dueDate = State(initialValue: task.dueDate)
+        _category = State(initialValue: task.category)
         self.onSave = onSave
     }
 
@@ -26,6 +29,15 @@ struct EditTaskView: View {
             Form {
                 Section("Task Name") {
                     TextField("Task title", text: $title)
+                }
+
+                Section("Category") {
+                    Picker("Category", selection: $category) {
+                        ForEach(TaskCategory.allCases) { category in
+                            Text(category.rawValue)
+                                .tag(category)
+                        }
+                    }
                 }
 
                 Section("Priority") {
@@ -76,10 +88,10 @@ struct EditTaskView: View {
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        onSave(title, priority, dueDate)
+                        onSave(title, priority, dueDate, category)
                         dismiss()
                     }
-                    .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
         }

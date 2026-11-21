@@ -8,24 +8,27 @@ struct TaskRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Button(action: onToggle) {
-                Image(
-                    systemName: task.isCompleted
-                        ? "checkmark.circle.fill"
-                        : "circle"
-                )
-                .foregroundStyle(task.isCompleted ? .green : .secondary)
-                .font(.title2)
+                Image(systemName: task.isCompleted
+                      ? "checkmark.circle.fill"
+                      : "circle")
+                    .foregroundStyle(task.isCompleted ? .green : .secondary)
+                    .font(.title2)
             }
             .buttonStyle(.plain)
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(task.title)
                     .strikethrough(task.isCompleted)
-                    .foregroundStyle(
-                        task.isCompleted ? .secondary : .primary
-                    )
+                    .foregroundStyle(task.isCompleted ? .secondary : .primary)
 
                 HStack(spacing: 8) {
+                    Text(task.category.rawValue)
+                        .font(.caption)
+                        .foregroundStyle(.blue)
+
+                    Text("•")
+                        .foregroundStyle(.secondary)
+
                     Text(task.priority.rawValue)
                         .font(.caption)
                         .foregroundStyle(priorityColor)
@@ -54,14 +57,9 @@ struct TaskRow: View {
 
     private var priorityColor: Color {
         switch task.priority {
-        case .low:
-            return .green
-
-        case .medium:
-            return .orange
-
-        case .high:
-            return .red
+        case .low: return .green
+        case .medium: return .orange
+        case .high: return .red
         }
     }
 }

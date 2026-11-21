@@ -9,20 +9,24 @@ class TaskViewModel {
         title: String,
         priority: TaskPriority = .medium,
         dueDate: Date? = nil,
+        category: TaskCategory = .other,
         context: ModelContext
     ) {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+
         guard !trimmedTitle.isEmpty else { return }
 
         let task = FocusTask(
             title: trimmedTitle,
             priority: priority,
-            dueDate: dueDate
+            dueDate: dueDate,
+            category: category
         )
 
         context.insert(task)
         save(context)
     }
+
 
     func deleteTask(
         _ task: FocusTask,
@@ -30,6 +34,14 @@ class TaskViewModel {
     ) {
         context.delete(task)
         save(context)
+    }
+    
+    func deleteTasks(_ tasks: [FocusTask], context: ModelContext) {
+        for task in tasks {
+            context.delete(task)
+        }
+
+        try? context.save()
     }
 
     func toggleTask(
@@ -45,17 +57,21 @@ class TaskViewModel {
         title: String,
         priority: TaskPriority,
         dueDate: Date?,
+        category: TaskCategory,
         context: ModelContext
     ) {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+
         guard !trimmedTitle.isEmpty else { return }
 
         task.title = trimmedTitle
         task.priority = priority
         task.dueDate = dueDate
+        task.category = category
 
         save(context)
     }
+
 
     func filteredTasks(
         _ tasks: [FocusTask],
