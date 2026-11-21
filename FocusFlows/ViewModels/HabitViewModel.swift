@@ -22,12 +22,27 @@ class HabitViewModel {
     }
 
     func toggleHabit(_ habit: Habit, context: ModelContext) {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: .now)
+
         if habit.isCompletedToday {
             habit.isCompletedToday = false
             habit.completedAt = nil
+
+            habit.completionDates.removeAll {
+                calendar.isDate($0, inSameDayAs: today)
+            }
         } else {
             habit.isCompletedToday = true
             habit.completedAt = .now
+
+            let alreadyRecorded = habit.completionDates.contains {
+                calendar.isDate($0, inSameDayAs: today)
+            }
+
+            if !alreadyRecorded {
+                habit.completionDates.append(today)
+            }
         }
 
         save(context)
