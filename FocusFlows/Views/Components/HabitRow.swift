@@ -7,6 +7,8 @@ struct HabitRow: View {
     let onEdit: () -> Void
     let onDelete: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     private var currentStreak: Int {
         HabitStreakCalculator.currentStreak(for: habit)
     }
@@ -26,8 +28,12 @@ struct HabitRow: View {
             HStack(spacing: 12) {
 
                 Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.65)) {
+                    if reduceMotion {
                         onToggle()
+                    } else {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.65)) {
+                            onToggle()
+                        }
                     }
                 } label: {
                     Image(systemName: habit.isCompletedToday
@@ -110,7 +116,7 @@ struct HabitRow: View {
         .padding()
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 12))
-        .animation(.easeInOut(duration: 0.25), value: habit.isCompletedToday)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: habit.isCompletedToday)
         .sensoryFeedback(.success, trigger: habit.isCompletedToday)
     }
 }

@@ -6,12 +6,18 @@ struct TaskRow: View {
     let onToggle: () -> Void
     let onEdit: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         HStack(spacing: 12) {
 
             Button {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.65)) {
+                if reduceMotion {
                     onToggle()
+                } else {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.65)) {
+                        onToggle()
+                    }
                 }
             } label: {
                 Image(systemName: task.isCompleted
@@ -64,7 +70,7 @@ struct TaskRow: View {
             .buttonStyle(.plain)
         }
         .padding(.vertical, 8)
-        .animation(.easeInOut(duration: 0.25), value: task.isCompleted)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: task.isCompleted)
         .sensoryFeedback(.success, trigger: task.isCompleted)
     }
 
