@@ -9,9 +9,23 @@ enum TaskPriority: String, CaseIterable, Identifiable {
 }
 
 struct FocusTask: Identifiable {
-    let id = UUID()
+    let id: UUID
     var title: String
     var isCompleted: Bool
-    var priority: TaskPriority = .medium
-    var dueDate: Date? = nil
+    var priority: TaskPriority
+    var dueDate: Date?
+
+    init(
+        id: UUID = UUID(),
+        title: String,
+        isCompleted: Bool = false,
+        priority: TaskPriority = .medium,
+        dueDate: Date? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.isCompleted = isCompleted
+        self.priority = priority
+        self.dueDate = dueDate
+    }
 }

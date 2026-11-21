@@ -2,16 +2,28 @@ import SwiftUI
 
 struct TodayView: View {
     @State private var viewModel = TaskViewModel()
+
     @State private var newTaskTitle = ""
     @State private var newTaskPriority: TaskPriority = .medium
     @State private var newTaskDueDate: Date?
+
     @State private var editingTask: FocusTask?
+    @State private var selectedFilter: TaskFilter = .all
+    @State private var selectedSort: TaskSort = .none
+
+    private var displayedTasks: [FocusTask] {
+        viewModel.filteredTasks(
+            filter: selectedFilter,
+            sort: selectedSort
+        )
+    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 HeaderView()
 
+                // Greeting
                 VStack(alignment: .leading, spacing: 8) {
                     Text(Date.now.formatted(date: .complete, time: .omitted))
                         .font(.subheadline)
@@ -37,11 +49,13 @@ struct TodayView: View {
                                 .font(.title3)
                                 .fontWeight(.semibold)
 
-                            Text(viewModel.totalTasks == 0
-                                 ? "Start by adding your tasks"
-                                 : "Keep up the good work!")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                            Text(
+                                viewModel.totalTasks == 0
+                                    ? "Start by adding your tasks"
+                                    : "Keep up the good work!"
+                            )
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
                         }
 
                         Spacer()
@@ -64,6 +78,7 @@ struct TodayView: View {
                         .font(.title2)
                         .fontWeight(.bold)
 
+                    // Add Task
                     TaskInputView(
                         newTaskTitle: $newTaskTitle,
                         priority: $newTaskPriority,
@@ -80,18 +95,45 @@ struct TodayView: View {
                         newTaskDueDate = nil
                     }
 
-                    if viewModel.tasks.isEmpty {
+                    // Filter
+                    Picker("Filter", selection: $selectedFilter) {
+                        ForEach(TaskFilter.allCases) { filter in
+                            Text(filter.rawValue)
+                                .tag(filter)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    // Sort
+                    Picker("Sort", selection: $selectedSort) {
+                        ForEach(TaskSort.allCases) { sort in
+                            Text(sort.rawValue)
+                                .tag(sort)
+                        }
+                    }
+                    .pickerStyle(.menu)
+
+                    // Task List
+                    if displayedTasks.isEmpty {
                         ContentUnavailableView(
-                            "No Tasks Yet",
+                            emptyTitle,
                             systemImage: "checklist",
-                            description: Text("Add a task to get started.")
+                            description: Text(
+                                "Tasks matching this filter will appear here."
+                            )
                         )
                         .padding(.vertical, 20)
                     } else {
-                        ForEach($viewModel.tasks) { $task in
-                            TaskRow(task: $task) {
-                                editingTask = task
-                            }
+                        ForEach(displayedTasks) { task in
+                            TaskRow(
+                                task: task,
+                                onToggle: {
+                                    viewModel.toggleTask(id: task.id)
+                                },
+                                onEdit: {
+                                    editingTask = task
+                                }
+                            )
                             .swipeActions {
                                 Button(role: .destructive) {
                                     viewModel.deleteTask(id: task.id)
@@ -117,6 +159,19 @@ struct TodayView: View {
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var emptyTitle: String {
+        switch selectedFilter {
+        case .all:
+            return "No Tasks Yet"
+
+        case .active:
+            return "No Active Tasks"
+
+        case .completed:
+            return "No Completed Tasks"
+        }
     }
 }
 
