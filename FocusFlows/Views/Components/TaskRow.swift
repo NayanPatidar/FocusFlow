@@ -1,22 +1,30 @@
 import SwiftUI
 
 struct TaskRow: View {
+
     let task: FocusTask
     let onToggle: () -> Void
     let onEdit: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
-            Button(action: onToggle) {
+
+            Button {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.65)) {
+                    onToggle()
+                }
+            } label: {
                 Image(systemName: task.isCompleted
                       ? "checkmark.circle.fill"
                       : "circle")
                     .foregroundStyle(task.isCompleted ? .green : .secondary)
                     .font(.title2)
+                    .scaleEffect(task.isCompleted ? 1.1 : 1.0)
             }
             .buttonStyle(.plain)
 
             VStack(alignment: .leading, spacing: 6) {
+
                 Text(task.title)
                     .strikethrough(task.isCompleted)
                     .foregroundStyle(task.isCompleted ? .secondary : .primary)
@@ -53,6 +61,7 @@ struct TaskRow: View {
             .buttonStyle(.plain)
         }
         .padding(.vertical, 8)
+        .animation(.easeInOut(duration: 0.25), value: task.isCompleted)
     }
 
     private var priorityColor: Color {
