@@ -93,17 +93,24 @@ struct HabitsView: View {
                                 editingHabit = habit
                             },
                             onDelete: {
-                                habitViewModel.deleteHabit(
-                                    habit,
-                                    context: context
-                                )
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                    habitViewModel.deleteHabit(
+                                        habit,
+                                        context: context
+                                    )
+                                }
                             }
                         )
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
+                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
                     }
                 }
                 .listStyle(.plain)
+                .animation(
+                    .spring(response: 0.35, dampingFraction: 0.8),
+                    value: habits.count
+                )
             }
 
             Spacer(minLength: 0)
