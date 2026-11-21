@@ -1,7 +1,8 @@
-
 import SwiftUI
+import SwiftData
 
 struct FocusTimerView: View {
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
     @State private var viewModel = TimerViewModel()
 
@@ -24,6 +25,9 @@ struct FocusTimerView: View {
             if newPhase == .active {
                 viewModel.refreshTimer()
             }
+        }
+        .onAppear {
+            viewModel.setModelContext(modelContext)
         }
     }
 

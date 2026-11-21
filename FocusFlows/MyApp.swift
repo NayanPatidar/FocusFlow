@@ -7,6 +7,9 @@ struct MyApp: App {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(for: [FocusTask.self, Habit.self])
-    }
+        .modelContainer(for: [
+            FocusTask.self,
+            Habit.self,
+            FocusSession.self
+        ])    }
 }
