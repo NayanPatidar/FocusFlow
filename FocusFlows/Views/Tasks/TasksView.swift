@@ -1,8 +1,8 @@
-
 import SwiftUI
 import SwiftData
 
 struct TasksView: View {
+
     @Environment(\.modelContext) private var context
     @Query private var tasks: [FocusTask]
 
@@ -28,8 +28,31 @@ struct TasksView: View {
         }
     }
 
+    private var emptyState: some View {
+        if tasks.isEmpty {
+            EmptyStateView(
+                systemImage: "checklist",
+                title: "No Tasks Yet",
+                message: "Start organizing your day by adding your first task."
+            )
+        } else if !searchText.isEmpty {
+            EmptyStateView(
+                systemImage: "magnifyingglass",
+                title: "No Results Found",
+                message: "Try changing your search to find the task you're looking for."
+            )
+        } else {
+            EmptyStateView(
+                systemImage: "line.3.horizontal.decrease.circle",
+                title: "No Tasks Found",
+                message: "No tasks match the selected filter."
+            )
+        }
+    }
+
     var body: some View {
         VStack(spacing: 16) {
+
             TextField("Search tasks...", text: $searchText)
                 .textFieldStyle(.roundedBorder)
                 .padding(.horizontal)
@@ -51,23 +74,30 @@ struct TasksView: View {
             .padding(.horizontal)
 
             List {
-                ForEach(searchedTasks) { task in
-                    TaskRow(
-                        task: task,
-                        onToggle: {
-                            viewModel.toggleTask(task, context: context)
-                        },
-                        onEdit: {
-                            // Edit action handled by TaskRow
-                        }
-                    )
-                }
-                .onDelete { offsets in
-                    let tasksToDelete = offsets.map {
-                        searchedTasks[$0]
+                if searchedTasks.isEmpty {
+                    emptyState
+                } else {
+                    ForEach(searchedTasks) { task in
+                        TaskRow(
+                            task: task,
+                            onToggle: {
+                                viewModel.toggleTask(task, context: context)
+                            },
+                            onEdit: {
+                                // Edit action handled by TaskRow
+                            }
+                        )
                     }
+                    .onDelete { offsets in
+                        let tasksToDelete = offsets.map {
+                            searchedTasks[$0]
+                        }
 
-                    viewModel.deleteTasks(tasksToDelete, context: context)
+                        viewModel.deleteTasks(
+                            tasksToDelete,
+                            context: context
+                        )
+                    }
                 }
             }
         }
