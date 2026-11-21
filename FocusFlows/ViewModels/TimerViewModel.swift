@@ -1,3 +1,4 @@
+
 import Foundation
 import Observation
 
@@ -43,10 +44,7 @@ class TimerViewModel {
         timer = nil
 
         if let endDate {
-            remainingSeconds = max(
-                0,
-                endDate.timeIntervalSinceNow
-            )
+            remainingSeconds = max(0, endDate.timeIntervalSinceNow)
         }
 
         isRunning = false
@@ -65,10 +63,7 @@ class TimerViewModel {
     private func tick() {
         guard let endDate else { return }
 
-        remainingSeconds = max(
-            0,
-            endDate.timeIntervalSinceNow
-        )
+        remainingSeconds = max(0, endDate.timeIntervalSinceNow)
 
         if remainingSeconds <= 0 {
             completePhase()
@@ -96,6 +91,9 @@ class TimerViewModel {
         }
 
         remainingSeconds = configuration.duration(for: currentPhase)
+
+        // Automatically start the next phase
+        start()
     }
 
     // MARK: - Change Phase
