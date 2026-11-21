@@ -40,12 +40,19 @@ struct HabitRow: View {
                         .scaleEffect(habit.isCompletedToday ? 1.1 : 1.0)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(
+                    habit.isCompletedToday
+                        ? "Mark \(habit.name) incomplete"
+                        : "Mark \(habit.name) complete"
+                )
+                .accessibilityHint("Double tap to change today's habit status")
 
                 VStack(alignment: .leading, spacing: 4) {
 
                     Text(habit.name)
                         .font(.headline)
                         .strikethrough(habit.isCompletedToday)
+                        .accessibilityAddTraits(.isHeader)
 
                     Text(habit.isCompletedToday ? "Completed today" : "Not completed")
                         .font(.caption)
@@ -58,6 +65,7 @@ struct HabitRow: View {
                         )
                         .font(.caption)
                         .foregroundStyle(.orange)
+                        .accessibilityLabel("Daily reminder at \(reminderTime.formatted(date: .omitted, time: .shortened))")
                     }
                 }
 
@@ -70,6 +78,8 @@ struct HabitRow: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Edit habit: \(habit.name)")
+                .accessibilityHint("Double tap to edit this habit")
 
                 Button(role: .destructive) {
                     onDelete()
@@ -78,6 +88,8 @@ struct HabitRow: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Delete habit: \(habit.name)")
+                .accessibilityHint("Double tap to delete this habit")
             }
 
             Divider()
@@ -85,11 +97,13 @@ struct HabitRow: View {
             HStack {
                 Label("\(currentStreak) day streak", systemImage: "flame.fill")
                     .foregroundStyle(currentStreak > 0 ? .orange : .secondary)
+                    .accessibilityLabel("Current streak: \(currentStreak) days")
 
                 Spacer()
 
                 Text("Best: \(longestStreak) days")
                     .foregroundStyle(.secondary)
+                    .accessibilityLabel("Longest streak: \(longestStreak) days")
             }
             .font(.caption)
         }
