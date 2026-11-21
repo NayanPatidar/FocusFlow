@@ -1,15 +1,24 @@
-
 import SwiftUI
 import SwiftData
 
 struct HabitsView: View {
+
     @Environment(\.modelContext) private var context
+
     @Query(sort: \Habit.createdAt, order: .reverse)
     private var habits: [Habit]
 
     @State private var habitViewModel = HabitViewModel()
     @State private var newHabitName = ""
     @State private var editingHabit: Habit?
+
+    @State private var newHabitReminderEnabled = false
+    @State private var newHabitReminderTime = Calendar.current.date(
+        bySettingHour: 9,
+        minute: 0,
+        second: 0,
+        of: .now
+    ) ?? .now
 
     private var completedCount: Int {
         habits.filter { $0.isCompletedToday }.count
@@ -22,23 +31,44 @@ struct HabitsView: View {
 
     var body: some View {
         VStack(spacing: 20) {
+
             progressCard
 
-            HStack(spacing: 12) {
-                TextField("Enter a habit", text: $newHabitName)
-                    .textFieldStyle(.roundedBorder)
+            // MARK: - Add Habit
 
-                Button {
-                    addHabit()
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .frame(width: 44, height: 44)
-                        .background(.blue)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+            VStack(alignment: .leading, spacing: 12) {
+
+                HStack(spacing: 12) {
+                    TextField("Enter a habit", text: $newHabitName)
+                        .textFieldStyle(.roundedBorder)
+
+                    Button {
+                        addHabit()
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .frame(width: 44, height: 44)
+                            .background(.blue)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                }
+
+                Toggle("Daily Reminder", isOn: $newHabitReminderEnabled)
+
+                if newHabitReminderEnabled {
+                    DatePicker(
+                        "Reminder Time",
+                        selection: $newHabitReminderTime,
+                        displayedComponents: .hourAndMinute
+                    )
                 }
             }
+            .padding()
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+
+            // MARK: - Habit List
 
             if habits.isEmpty {
                 ContentUnavailableView(
@@ -77,20 +107,40 @@ struct HabitsView: View {
             habitViewModel.refreshDailyStatus(habits, context: context)
         }
         .sheet(item: $editingHabit) { habit in
-            EditHabitView(habit: habit) { updatedName in
+            EditHabitView(habit: habit) { updatedName, updatedReminderTime in
+
                 habit.name = updatedName
+                habit.reminderTime = updatedReminderTime
 
                 do {
                     try context.save()
                 } catch {
                     print("Failed to update habit: \(error)")
                 }
+
+                if updatedReminderTime != nil {
+                    Task {
+                        let granted = await HabitReminderManager.shared
+                            .requestNotificationPermission()
+
+                        if granted {
+                            HabitReminderManager.shared.scheduleReminder(for: habit)
+                        } else {
+                            print("[HabitReminder] Permission not granted")
+                        }
+                    }
+                } else {
+                    HabitReminderManager.shared.cancelReminder(for: habit)
+                }
             }
         }
     }
 
+    // MARK: - Progress Card
+
     private var progressCard: some View {
         VStack(alignment: .leading, spacing: 12) {
+
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Today's Progress")
@@ -120,8 +170,16 @@ struct HabitsView: View {
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 
+    // MARK: - Add Habit
+
     private func addHabit() {
-        habitViewModel.addHabit(name: newHabitName, context: context)
+        habitViewModel.addHabit(
+            name: newHabitName,
+            reminderTime: newHabitReminderEnabled ? newHabitReminderTime : nil,
+            context: context
+        )
+
         newHabitName = ""
+        newHabitReminderEnabled = false
     }
 }

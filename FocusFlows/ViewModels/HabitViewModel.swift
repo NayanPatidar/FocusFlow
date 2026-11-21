@@ -1,4 +1,3 @@
-
 import Foundation
 import Observation
 import SwiftData
@@ -6,20 +5,48 @@ import SwiftData
 @Observable
 class HabitViewModel {
 
-    func addHabit(name: String, context: ModelContext) {
-        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+    // MARK: - Add Habit
 
+    func addHabit(
+        name: String,
+        reminderTime: Date? = nil,
+        context: ModelContext
+    ) {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return }
 
-        let habit = Habit(name: trimmedName)
+        let habit = Habit(
+            name: trimmedName,
+            reminderTime: reminderTime
+        )
+
         context.insert(habit)
         save(context)
+
+        if reminderTime != nil {
+            Task {
+                let granted = await HabitReminderManager.shared
+                    .requestNotificationPermission()
+
+                if granted {
+                    HabitReminderManager.shared.scheduleReminder(for: habit)
+                } else {
+                    print("[HabitReminder] Permission not granted")
+                }
+            }
+        }
     }
 
+    // MARK: - Delete Habit
+
     func deleteHabit(_ habit: Habit, context: ModelContext) {
+        HabitReminderManager.shared.cancelReminder(for: habit)
+
         context.delete(habit)
         save(context)
     }
+
+    // MARK: - Toggle Habit
 
     func toggleHabit(_ habit: Habit, context: ModelContext) {
         let calendar = Calendar.current
@@ -48,6 +75,8 @@ class HabitViewModel {
         save(context)
     }
 
+    // MARK: - Refresh Daily Status
+
     func refreshDailyStatus(_ habits: [Habit], context: ModelContext) {
         let calendar = Calendar.current
         var changed = false
@@ -58,6 +87,7 @@ class HabitViewModel {
                     habit.isCompletedToday = false
                     changed = true
                 }
+
                 continue
             }
 
@@ -72,6 +102,8 @@ class HabitViewModel {
             save(context)
         }
     }
+
+    // MARK: - Save
 
     private func save(_ context: ModelContext) {
         do {
