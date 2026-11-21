@@ -1,0 +1,35 @@
+import SwiftUI
+import Observation
+
+@Observable
+class TaskViewModel {
+    var tasks: [FocusTask] = []
+
+    var completedTasks: Int {
+        tasks.filter { $0.isCompleted }.count
+    }
+
+    var totalTasks: Int {
+        tasks.count
+    }
+
+    var progress: Double {
+        guard totalTasks > 0 else { return 0 }
+        return Double(completedTasks) / Double(totalTasks)
+    }
+
+    func addTask(title: String) {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespaces)
+
+        guard !trimmedTitle.isEmpty else { return }
+
+        tasks.append(
+            FocusTask(title: trimmedTitle, isCompleted: false)
+        )
+    }
+
+    func deleteTask(id: UUID) {
+        let updatedTasks = tasks.filter { $0.id != id }
+        tasks = updatedTasks
+    }
+}
