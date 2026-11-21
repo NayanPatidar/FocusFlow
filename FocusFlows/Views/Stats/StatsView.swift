@@ -121,9 +121,17 @@ struct StatsView: View {
                         color: .mint
                     )
                 }
-                WeeklyFocusChart(sessions: focusSessions)
-
-                FocusSessionHistoryView(sessions: focusSessions)
+                
+                if focusSessions.isEmpty {
+                    EmptyStateView(
+                        systemImage: "timer",
+                        title: "No Focus Sessions Yet",
+                        message: "Complete your first focus session to see your focus history and analytics."
+                    )
+                } else {
+                    WeeklyFocusChart(sessions: focusSessions)
+                    FocusSessionHistoryView(sessions: focusSessions)
+                }
 
                 WeeklyTaskChart(tasks: tasks)
 
