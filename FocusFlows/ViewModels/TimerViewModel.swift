@@ -40,6 +40,7 @@ class TimerViewModel {
 
         if !isRunning {
             remainingSeconds = configuration.duration(for: currentPhase)
+            focusStartedAt = nil
         }
     }
 
@@ -74,13 +75,19 @@ class TimerViewModel {
             self?.tick()
         }
 
-        Task {
-            await NotificationManager.shared.requestPermission()
+        let phase = currentPhase
+
+        Task { @MainActor in
+            _ = await NotificationManager.shared.requestPermission()
+
+            // The user may have paused, reset or switched phase while the
+            // permission prompt was showing.
+            guard isRunning, currentPhase == phase, let endDate else { return }
 
             NotificationManager.shared.scheduleNotification(
-                title: "\(currentPhase.rawValue) Complete",
-                body: notificationMessage(for: currentPhase),
-                after: remainingSeconds
+                title: "\(phase.rawValue) Complete",
+                body: notificationMessage(for: phase),
+                after: endDate.timeIntervalSinceNow
             )
         }
     }
@@ -106,6 +113,7 @@ class TimerViewModel {
     func reset() {
         pause()
         remainingSeconds = configuration.duration(for: currentPhase)
+        focusStartedAt = nil
     }
 
     // MARK: - Tick
@@ -128,6 +136,10 @@ class TimerViewModel {
 
         NotificationManager.shared.cancelNotification()
 
+        // When the app returns from the background late, the phase really
+        // ended at `endDate`, not now.
+        let phaseEndedAt = min(endDate ?? Date(), Date())
+
         isRunning = false
         endDate = nil
 
@@ -136,15 +148,18 @@ class TimerViewModel {
         // Save completed focus session
         if completedPhase == .focus {
 
+            // The countdown only moves while running, so a completed focus
+            // phase is exactly the configured length. Paused time and time
+            // spent away from the app are not focus time.
+            let focusedDuration = configuration.duration(for: .focus)
+            let completedAt = phaseEndedAt
             let startedAt = focusStartedAt
-                ?? Date().addingTimeInterval(-configuration.duration(for: .focus))
-
-            let completedAt = Date()
+                ?? completedAt.addingTimeInterval(-focusedDuration)
 
             let session = FocusSession(
                 startedAt: startedAt,
                 completedAt: completedAt,
-                duration: completedAt.timeIntervalSince(startedAt)
+                duration: focusedDuration
             )
 
             modelContext?.insert(session)
@@ -196,6 +211,7 @@ class TimerViewModel {
 
         currentPhase = phase
         remainingSeconds = configuration.duration(for: phase)
+        focusStartedAt = nil
 
         if wasRunning {
             start()

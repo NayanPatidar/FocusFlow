@@ -48,19 +48,18 @@ class TaskViewModel {
         save(context)
     }
 
-    // MARK: - Restore Task
+    // MARK: - Deferred Delete (Undo)
+    //
+    // A deleted task is hidden first and only removed from the store once the
+    // undo window closes. Re-inserting an already deleted SwiftData model is
+    // unsafe, so undo simply cancels the pending delete.
 
-    func restoreTask(
-        _ task: FocusTask,
-        context: ModelContext
-    ) {
+    func beginPendingDelete(_ task: FocusTask) {
+        TaskReminderManager.shared.cancelReminder(for: task)
+    }
 
-        context.insert(task)
-        save(context)
-
-        if !task.isCompleted {
-            TaskReminderManager.shared.scheduleReminder(for: task)
-        }
+    func cancelPendingDelete(_ task: FocusTask) {
+        TaskReminderManager.shared.scheduleReminder(for: task)
     }
 
     // MARK: - Bulk Delete

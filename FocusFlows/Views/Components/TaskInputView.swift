@@ -106,7 +106,7 @@ struct TaskInputView: View {
                     .datePickerStyle(.compact)
 
                     Button("Confirm Date") {
-                        dueDate = selectedDate
+                        dueDate = Calendar.current.startOfDay(for: selectedDate)
                         showDatePicker = false
                     }
                     .font(.subheadline)

@@ -65,7 +65,7 @@ struct EditTaskView: View {
                         )
 
                         Button("Confirm Date") {
-                            dueDate = selectedDate
+                            dueDate = Calendar.current.startOfDay(for: selectedDate)
                             showDatePicker = false
                         }
                     }

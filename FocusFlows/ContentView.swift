@@ -1,5 +1,7 @@
 
 import SwiftUI
+import SwiftData
+import UIKit
 
 enum AppTab: Hashable {
     case today, tasks, habits, stats, focus
@@ -8,6 +10,9 @@ enum AppTab: Hashable {
 struct ContentView: View {
 
     @State private var selectedTab: AppTab = .today
+
+    @Environment(\.modelContext) private var context
+    @Environment(\.scenePhase) private var scenePhase
 
     @AppStorage("appAppearance") private var appearance = "system"
 
@@ -66,5 +71,21 @@ struct ContentView: View {
             .tag(AppTab.focus)
         }
         .preferredColorScheme(preferredColorScheme)
+        // Habits store "done today" as a flag, so reset it whenever a new day
+        // may have started: on launch, on return from background, and at midnight.
+        .onAppear(perform: refreshHabitsForToday)
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                refreshHabitsForToday()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+            refreshHabitsForToday()
+        }
+    }
+
+    private func refreshHabitsForToday() {
+        let habits = (try? context.fetch(FetchDescriptor<Habit>())) ?? []
+        HabitViewModel().refreshDailyStatus(habits, context: context)
     }
 }

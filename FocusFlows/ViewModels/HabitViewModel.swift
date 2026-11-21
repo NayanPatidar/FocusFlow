@@ -46,12 +46,15 @@ class HabitViewModel {
         save(context)
     }
 
-    // MARK: - Restore Habit
+    // MARK: - Deferred Delete (Undo)
+    //
+    // See TaskViewModel: hide first, delete for real when the undo window closes.
 
-    func restoreHabit(_ habit: Habit, context: ModelContext) {
-        context.insert(habit)
-        save(context)
+    func beginPendingDelete(_ habit: Habit) {
+        HabitReminderManager.shared.cancelReminder(for: habit)
+    }
 
+    func cancelPendingDelete(_ habit: Habit) {
         if habit.reminderTime != nil {
             HabitReminderManager.shared.scheduleReminder(for: habit)
         }

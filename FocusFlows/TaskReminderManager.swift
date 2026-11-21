@@ -7,37 +7,33 @@ final class TaskReminderManager {
 
     private let center = UNUserNotificationCenter.current()
 
+    /// Hour of the day a task reminder fires on its due date.
+    static let reminderHour = 9
+
     private init() {}
+
+    /// Due dates are calendar days, so the reminder fires at a fixed time
+    /// on that day rather than at midnight.
+    private func reminderDate(for dueDate: Date) -> Date? {
+        Calendar.current.date(
+            bySettingHour: Self.reminderHour,
+            minute: 0,
+            second: 0,
+            of: dueDate
+        )
+    }
 
     // MARK: - Schedule Reminder
 
     func scheduleReminder(for task: FocusTask) {
 
-        print("---- Scheduling Reminder ----")
-        print("Task: \(task.title)")
-        print("Completed: \(task.isCompleted)")
-        print("Due Date: \(String(describing: task.dueDate))")
-        print("Current Date: \(Date())")
-
         guard let dueDate = task.dueDate,
               !task.isCompleted,
-              dueDate > Date() else {
-
-            print("[TaskReminder] Guard failed for: \(task.title)")
-
-            if let dueDate = task.dueDate {
-                print("Due date is in future: \(dueDate > Date())")
-            } else {
-                print("Due date is NIL")
-            }
-
-            print("Task completed: \(task.isCompleted)")
-
+              let fireDate = reminderDate(for: dueDate),
+              fireDate > Date() else {
             cancelReminder(for: task)
             return
         }
-
-        print("[TaskReminder] Guard passed — scheduling now")
 
         let content = UNMutableNotificationContent()
         content.title = "Task Reminder"
@@ -46,7 +42,7 @@ final class TaskReminderManager {
 
         let components = Calendar.current.dateComponents(
             [.year, .month, .day, .hour, .minute],
-            from: dueDate
+            from: fireDate
         )
 
         let trigger = UNCalendarNotificationTrigger(

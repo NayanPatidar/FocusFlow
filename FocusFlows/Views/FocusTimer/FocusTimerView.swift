@@ -103,8 +103,11 @@ struct FocusTimerView: View {
         }
         .onAppear {
             viewModel.setModelContext(modelContext)
-            // Durations may have been changed from Settings.
-            viewModel.updateConfiguration()
+            // Durations may have been changed from Settings. Only apply them to a
+            // fresh timer: a paused timer must keep its remaining time.
+            if !viewModel.isRunning && viewModel.progress == 0 {
+                viewModel.updateConfiguration()
+            }
         }
     }
 

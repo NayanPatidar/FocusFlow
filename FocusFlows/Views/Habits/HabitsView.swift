@@ -7,13 +7,18 @@ struct HabitsView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @Query(sort: \Habit.createdAt, order: .reverse)
-    private var habits: [Habit]
+    private var allHabits: [Habit]
+
+    /// Habits on screen, without one that is waiting to be deleted.
+    private var habits: [Habit] {
+        allHabits.filter { $0.id != pendingDeleteHabit?.id }
+    }
 
     @State private var habitViewModel = HabitViewModel()
     @State private var editingHabit: Habit?
     @State private var showNewHabit = false
 
-    @State private var deletedHabit: Habit?
+    @State private var pendingDeleteHabit: Habit?
     @State private var snackbarID: UUID?
 
     private var completedCount: Int {
@@ -94,7 +99,7 @@ struct HabitsView: View {
             }
         }
         .onAppear {
-            habitViewModel.refreshDailyStatus(habits, context: context)
+            habitViewModel.refreshDailyStatus(allHabits, context: context)
         }
         .sheet(isPresented: $showNewHabit) {
             NewHabitSheet { name, reminderTime in
@@ -136,16 +141,12 @@ struct HabitsView: View {
             }
         }
         .overlay(alignment: .bottom) {
-            if snackbarID != nil, let deletedHabit {
+            if snackbarID != nil, pendingDeleteHabit != nil {
                 SnackbarView(
                     message: "Habit deleted",
-                    actionTitle: "UNDO"
-                ) {
-                    withAnimation(listAnimation) {
-                        habitViewModel.restoreHabit(deletedHabit, context: context)
-                    }
-                    dismissSnackbar()
-                }
+                    actionTitle: "UNDO",
+                    onAction: undoDelete
+                )
                 .padding(.horizontal, 16)
                 .padding(.bottom, 12)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -161,8 +162,9 @@ struct HabitsView: View {
                 return
             }
 
-            dismissSnackbar()
+            commitPendingDelete()
         }
+        .onDisappear(perform: commitPendingDelete)
     }
 
     // MARK: - Progress header
@@ -192,17 +194,36 @@ struct HabitsView: View {
     // MARK: - Delete / Undo
 
     private func delete(_ habit: Habit) {
-        deletedHabit = habit
+        // Only one pending delete at a time: finish the previous one first.
+        commitPendingDelete()
+
+        habitViewModel.beginPendingDelete(habit)
 
         withAnimation(listAnimation) {
-            habitViewModel.deleteHabit(habit, context: context)
+            pendingDeleteHabit = habit
         }
 
         snackbarID = UUID()
     }
 
-    private func dismissSnackbar() {
+    private func undoDelete() {
+        guard let habit = pendingDeleteHabit else { return }
+
+        habitViewModel.cancelPendingDelete(habit)
+
+        withAnimation(listAnimation) {
+            pendingDeleteHabit = nil
+        }
+
         snackbarID = nil
-        deletedHabit = nil
+    }
+
+    private func commitPendingDelete() {
+        guard let habit = pendingDeleteHabit else { return }
+
+        pendingDeleteHabit = nil
+        snackbarID = nil
+
+        habitViewModel.deleteHabit(habit, context: context)
     }
 }

@@ -16,7 +16,7 @@ struct TasksView: View {
     @State private var editingTask: FocusTask?
     @State private var showCompleted = false
 
-    @State private var deletedTask: FocusTask?
+    @State private var pendingDeleteTask: FocusTask?
     @State private var snackbarID: UUID?
 
     private let viewModel = TaskViewModel()
@@ -25,7 +25,7 @@ struct TasksView: View {
 
     private var visibleTasks: [FocusTask] {
         let filtered = viewModel.filteredTasks(
-            tasks,
+            tasks.filter { $0.id != pendingDeleteTask?.id },
             filter: selectedFilter,
             sort: selectedSort
         )
@@ -158,16 +158,12 @@ struct TasksView: View {
             }
         }
         .overlay(alignment: .bottom) {
-            if snackbarID != nil, let deletedTask {
+            if snackbarID != nil, pendingDeleteTask != nil {
                 SnackbarView(
                     message: "Task deleted",
-                    actionTitle: "UNDO"
-                ) {
-                    withAnimation(listAnimation) {
-                        viewModel.restoreTask(deletedTask, context: context)
-                    }
-                    dismissSnackbar()
-                }
+                    actionTitle: "UNDO",
+                    onAction: undoDelete
+                )
                 .padding(.horizontal, 16)
                 .padding(.bottom, 12)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -184,8 +180,9 @@ struct TasksView: View {
                 return
             }
 
-            dismissSnackbar()
+            commitPendingDelete()
         }
+        .onDisappear(perform: commitPendingDelete)
     }
 
     // MARK: - Rows
@@ -300,18 +297,37 @@ struct TasksView: View {
     // MARK: - Delete / Undo
 
     private func delete(_ task: FocusTask) {
-        deletedTask = task
+        // Only one pending delete at a time: finish the previous one first.
+        commitPendingDelete()
+
+        viewModel.beginPendingDelete(task)
 
         withAnimation(listAnimation) {
-            viewModel.deleteTask(task, context: context)
+            pendingDeleteTask = task
         }
 
         snackbarID = UUID()
     }
 
-    private func dismissSnackbar() {
+    private func undoDelete() {
+        guard let task = pendingDeleteTask else { return }
+
+        viewModel.cancelPendingDelete(task)
+
+        withAnimation(listAnimation) {
+            pendingDeleteTask = nil
+        }
+
         snackbarID = nil
-        deletedTask = nil
+    }
+
+    private func commitPendingDelete() {
+        guard let task = pendingDeleteTask else { return }
+
+        pendingDeleteTask = nil
+        snackbarID = nil
+
+        viewModel.deleteTask(task, context: context)
     }
 }
 
