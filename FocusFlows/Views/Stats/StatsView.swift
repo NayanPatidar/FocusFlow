@@ -115,6 +115,9 @@ struct StatsView: View {
                         color: .mint
                     )
                 }
+                WeeklyFocusChart(sessions: focusSessions)
+
+                FocusSessionHistoryView(sessions: focusSessions)
 
                 WeeklyTaskChart(tasks: tasks)
 
@@ -124,7 +127,8 @@ struct StatsView: View {
 
                 ProductivityInsightsView(
                     tasks: tasks,
-                    habits: habits
+                    habits: habits,
+                    focusSessions: focusSessions
                 )
             }
             .padding()
