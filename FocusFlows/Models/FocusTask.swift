@@ -2,6 +2,6 @@ import Foundation
 
 struct FocusTask: Identifiable {
     let id = UUID()
-    let title: String
+    var title: String
     var isCompleted: Bool
 }

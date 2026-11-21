@@ -32,4 +32,16 @@ class TaskViewModel {
         let updatedTasks = tasks.filter { $0.id != id }
         tasks = updatedTasks
     }
+    
+    func updateTask(id: UUID, title: String) {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespaces)
+
+        guard !trimmedTitle.isEmpty else { return }
+
+        guard let index = tasks.firstIndex(where: { $0.id == id }) else {
+            return
+        }
+
+        tasks[index].title = trimmedTitle
+    }
 }

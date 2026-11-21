@@ -3,6 +3,7 @@ import SwiftUI
 struct TodayView: View {
     @State private var viewModel = TaskViewModel()
     @State private var newTaskTitle = ""
+    @State private var editingTask: FocusTask?
 
     var body: some View {
         ScrollView {
@@ -56,7 +57,7 @@ struct TodayView: View {
                 .background(Color(.secondarySystemBackground))
                 .clipShape(RoundedRectangle(cornerRadius: 20))
 
-                // Task Section
+                // Tasks
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Today's Tasks")
                         .font(.title2)
@@ -76,19 +77,26 @@ struct TodayView: View {
                         .padding(.vertical, 20)
                     } else {
                         ForEach($viewModel.tasks) { $task in
-                            TaskRow(task: $task)
-                                .swipeActions {
-                                    Button(role: .destructive) {
-                                        viewModel.deleteTask(id: task.id)
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
+                            TaskRow(task: $task) {
+                                editingTask = task
+                            }
+                            .swipeActions {
+                                Button(role: .destructive) {
+                                    viewModel.deleteTask(id: task.id)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
                                 }
+                            }
                         }
                     }
                 }
             }
             .padding()
+        }
+        .sheet(item: $editingTask) { task in
+            EditTaskView(taskTitle: task.title) { updatedTitle in
+                viewModel.updateTask(id: task.id, title: updatedTitle)
+            }
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)

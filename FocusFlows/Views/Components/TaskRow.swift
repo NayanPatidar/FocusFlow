@@ -1,30 +1,39 @@
 import SwiftUI
 
 struct TaskRow: View {
-
     @Binding var task: FocusTask
+    let onEdit: () -> Void
 
     var body: some View {
-        Button {
-            task.isCompleted.toggle()
-        } label: {
-            HStack {
-                Text(task.title)
-                    .font(.title2)
-                    .strikethrough(task.isCompleted)
-                    .foregroundStyle(task.isCompleted ? .gray : .primary)
+        HStack {
+            Button {
+                task.isCompleted.toggle()
+            } label: {
+                HStack {
+                    Text(task.title)
+                        .font(.title3)
+                        .strikethrough(task.isCompleted)
+                        .foregroundStyle(task.isCompleted ? .gray : .primary)
 
-                Spacer()
+                    Spacer()
 
-                if task.isCompleted {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                } else {
-                    Image(systemName: "circle")
-                        .foregroundStyle(.secondary)
+                    Image(systemName: task.isCompleted
+                          ? "checkmark.circle.fill"
+                          : "circle")
+                        .foregroundStyle(task.isCompleted ? .green : .secondary)
                 }
             }
+            .buttonStyle(.plain)
+
+            Button {
+                onEdit()
+            } label: {
+                Image(systemName: "pencil")
+                    .foregroundStyle(.secondary)
+                    .padding(.leading, 12)
+            }
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
+        .padding(.vertical, 6)
     }
 }
